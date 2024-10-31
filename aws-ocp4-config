@@ -1,0 +1,70 @@
+#!/bin/bash
+# CHECK VARIABLE VALUES ARE BETWEEN DOUBLE QUOTES!
+
+# OpenShift version (must be 4.x.z format)
+# https://mirror.openshift.com/pub/openshift-v4/clients/ocp
+OPENSHIFT_VERSION="4.17.3"
+
+# Enter here your RHPDS Lab GUID
+RHPDS_GUID="XXXX" # It has two be a number 1 < X < 9999!
+
+# Enter here your RHPDS Lab Top Level Route53 Domain excluding the dot prefix at the beginning. Example: sandbox1234.opentlc.com
+RHPDS_TOP_LEVEL_ROUTE53_DOMAIN="sandbox${RHPDS_GUID}.opentlc.com"
+
+# Enter here your cluster name
+CLUSTER_NAME="ocp"
+    
+# AWS credentials
+## AWS Access Key ID
+export AWS_ACCESS_KEY_ID=""
+## AWS Secret Access Key
+export AWS_SECRET_ACCESS_KEY=""
+
+# AWS Region. Change according to your location
+# https://docs.openshift.com/container-platform/4.15/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
+export AWS_DEFAULT_REGION="eu-west-1"
+
+# AWS AMI EC2 instance AMI
+# https://docs.openshift.com/container-platform/4.15/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
+# AWS_AMI="ami-0faeeeb3d2b1aa07c"
+
+# Enter Pull Secret given from RedHat OpenShift Cluster Manager site (https://console.redhat.com/openshift/downloads#tool-pull-secret) for an AWS IPI installation
+# WARNING: FILL THE PULL SECRET BETWEEN SINGLE QUOTES HERE!
+RHOCM_PULL_SECRET=''
+
+# This is the base URL to download both CLI and installer. You are not supposed to modify it unless you need to experiment nightly releases.
+OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
+
+# AWS Bastion Security Group Name
+# AWS_BASTION_SG_NAME="BastionSG"
+
+# AWS Subnet Name
+# AWS_SUBNET_NAME="sandbox-${RHPDS_GUID}"
+
+# Machines configuration
+# https://aws.amazon.com/ec2/instance-types/
+# https://aws.amazon.com/ec2/pricing/on-demand/
+## 1) Normal worker => WORKER_INSTANCE_TYPE=m7i.2xlarge
+## 2) Large Worker  => WORKER_INSTANCE_TYPE=m7i.4xlarge
+
+# Option 1: Multi-node OCP
+WORKER_INSTANCE_TYPE=m7i.2xlarge # Normal worker nodes
+# WORKER_INSTANCE_TYPE=m6id.4xlarge # ODF nodes
+WORKER_REPLICAS=1
+MASTER_INSTANCE_TYPE=m7i.xlarge
+
+# Option 2: Single-node OCP
+# WORKER_REPLICAS=0
+# MASTER_INSTANCE_TYPE=m7i.4xlarge
+# MASTER_REPLICAS=1
+
+
+
+# Extra configuration
+WORKDIR="$(pwd)/ocp4-sandbox${RHPDS_GUID}"
+# OCP SSL Certificates
+INSTALL_LETS_ENCRYPT_CERTIFICATES=True
+CLUSTER_WORKDIR="${WORKDIR}"
+
+
+# ./aws-ocp4-install.sh ./aws-ocp4-config
