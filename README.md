@@ -2,10 +2,22 @@
 
 This repository contains a set of scripts that would facilitate the provisioning and configuration of an OCP 4 cluster on AWS.
 
+- [OCP 4 basic installation on AWS](#ocp-4-basic-installation-on-aws)
+  - [AWS account- OCP 4 basic installation on AWS](#aws-account--ocp-4-basic-installation-on-aws)
+  - [Authentication](#authentication)
+  - [Configuration](#configuration)
+  - [Single-node OpenShift](#single-node-openshift)
+  - [Cluster installation](#cluster-installation)
+  - [Cluster deprovisioning](#cluster-deprovisioning)
+  - [Start/Stop EC2 instances](#startstop-ec2-instances)
+- [Annex: Add users to the OCP cluster prior to the installation](#annex-add-users-to-the-ocp-cluster-prior-to-the-installation)
+
+
 > [!CAUTION]
 > This is not intended for production usage. 
 
-## AWS account
+## AWS account- [OCP 4 basic installation on AWS](#ocp-4-basic-installation-on-aws)
+
 
 In order to install OpenShift on AWS using IPI (Installer-Provisioned Infrastructure), you need the following configuration:
 
@@ -17,7 +29,15 @@ In order to install OpenShift on AWS using IPI (Installer-Provisioned Infrastruc
 > If you are a Red Hatter, you can order a lab environment on the (Red Hat Demo Platform)[https://demo.redhat.com/]. Request environment `Red Hat Open Environments` > `AWS Blank Open Environment`
 
 
-## Prerequisites
+## Authentication
+
+This automation will automatically create certain users on the cluster and add then to the `cluster-admin` role. In order to automate that, you have the `auth` folder with all the configuration. Please, you need to update two files:
+
+* Create a `users.htpasswd` file inside the `auth` folder to store the hash credentials. You can add users with the following command: `htpasswd -b -B auth/users.htpasswd myusername mypassword`.
+* Move the `group-cluster-admins.yaml.example` file to `group-cluster-admins.yaml` and add the users that you want to give `cluster-admin` to.
+
+
+## Configuration
 
 **Create a copy** and **modify** [aws-ocp4-config](aws-ocp4-config) file. This file contains required config data used by the installation script to provision and configure the new OCP 4 cluster. Use the new file as source of configuration for the installation.
 
@@ -111,9 +131,8 @@ Keep also in mind that if you **don't need the cluster anymore, please, deprovis
 
 # Annex: Add users to the OCP cluster prior to the installation
 
-`htpasswd -b -B auth/users.htpasswd myusername mypassword`
 
-After that, you can update the credentials secret in OCP using the following commands:
+If you want to add users after installation, you can add users to the `htpasswd` file and then update the secret with the following commands:
 
 ```bash
 oc delete secret htpass-secret -n openshift-config
