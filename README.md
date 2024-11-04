@@ -10,7 +10,7 @@ This repository contains a set of scripts that would facilitate the provisioning
   - [Cluster installation](#cluster-installation)
   - [Cluster deprovisioning](#cluster-deprovisioning)
   - [Start/Stop EC2 instances](#startstop-ec2-instances)
-- [Annex: Add users to the OCP cluster prior to the installation](#annex-add-users-to-the-ocp-cluster-prior-to-the-installation)
+- [Annex: Add users to OCP cluster after install](#annex-add-users-to-ocp-cluster-after-install)
 
 
 > [!CAUTION]
@@ -26,7 +26,7 @@ In order to install OpenShift on AWS using IPI (Installer-Provisioned Infrastruc
 * To configure the top-level domain in AWS Route 53, create a hosted zone for your domain, update the registrar with the provided NS records, and then add the necessary DNS records like A or CNAME to point to your infrastructure. This setup links your domain to Route 53, allowing you to manage DNS for your website or services.
 
 > [!IMPORTANT]
-> If you are a Red Hatter, you can order a lab environment on the (Red Hat Demo Platform)[https://demo.redhat.com/]. Request environment `Red Hat Open Environments` > `AWS Blank Open Environment`
+> If you are a Red Hatter, you can order a lab environment on the [Red Hat Demo Platform](https://demo.redhat.com). Request environment `Red Hat Open Environments` > `AWS Blank Open Environment`
 
 
 ## Authentication
@@ -129,7 +129,7 @@ Ex: `./aws-ocp4-start-ec2.sh  ~/ocp4-sandbox932`
 Keep also in mind that if you **don't need the cluster anymore, please, deprovision it!!!**
 
 
-# Annex: Add users to the OCP cluster prior to the installation
+# Annex: Add users to OCP cluster after install
 
 
 If you want to add users after installation, you can add users to the `htpasswd` file and then update the secret with the following commands:
