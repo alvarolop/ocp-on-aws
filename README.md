@@ -3,7 +3,7 @@
 This repository contains a set of scripts that would facilitate the provisioning and configuration of an OCP 4 cluster on AWS.
 
 - [OCP 4 basic installation on AWS](#ocp-4-basic-installation-on-aws)
-  - [AWS account- OCP 4 basic installation on AWS](#aws-account--ocp-4-basic-installation-on-aws)
+  - [AWS account](#aws-account)
   - [Authentication](#authentication)
   - [Configuration](#configuration)
   - [Single-node OpenShift](#single-node-openshift)
@@ -16,7 +16,7 @@ This repository contains a set of scripts that would facilitate the provisioning
 > [!CAUTION]
 > This is not intended for production usage. 
 
-## AWS account- [OCP 4 basic installation on AWS](#ocp-4-basic-installation-on-aws)
+## AWS account
 
 
 In order to install OpenShift on AWS using IPI (Installer-Provisioned Infrastructure), you need the following configuration:
