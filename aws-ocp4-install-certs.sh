@@ -117,6 +117,7 @@ $CLUSTER_WORKDIR/oc patch apiserver cluster --type=merge --patch='{"spec": {"ser
 
 
 # Check cluster operators status
+set +e  # Disable exit on non-zero status to keep the script running even if commands fail. THere is no HA when cluster is SNO
 echo -e "\nCheck cluster operators..."
 while true; do
     $CLUSTER_WORKDIR/oc get clusteroperators
@@ -140,3 +141,5 @@ while true; do
     echo -e "Cluster operators are still progressing...Sleep 60s...\n"
     sleep 60
 done
+
+set -e  # Re-enable exit on non-zero status after the loop

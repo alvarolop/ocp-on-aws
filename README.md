@@ -10,6 +10,7 @@ This repository contains a set of scripts that would facilitate the provisioning
   - [Cluster installation](#cluster-installation)
   - [Cluster deprovisioning](#cluster-deprovisioning)
   - [Start/Stop EC2 instances](#startstop-ec2-instances)
+  - [OpenShift GitOps deployment](#openshift-gitops-deployment)
 - [Annex: Add users to OCP cluster after install](#annex-add-users-to-ocp-cluster-after-install)
 
 
@@ -34,7 +35,7 @@ In order to install OpenShift on AWS using IPI (Installer-Provisioned Infrastruc
 This automation will automatically create certain users on the cluster and add then to the `cluster-admin` role. In order to automate that, you have the `auth` folder with all the configuration. Please, you need to update two files:
 
 * Create a `users.htpasswd` file inside the `auth` folder to store the hash credentials. You can add users with the following command: `htpasswd -b -B auth/users.htpasswd myusername mypassword`.
-* Move the `group-cluster-admins.yaml.example` file to `group-cluster-admins.yaml` and add the users that you want to give `cluster-admin` to.
+* Copy the `group-cluster-admins.yaml.example` file to `group-cluster-admins.yaml` and add the users that you want to give `cluster-admin` to.
 
 
 ## Configuration
@@ -73,7 +74,6 @@ Ok, a full cluster (Multi-node cluster) is too much for your needs and you would
 * Optional, you can change the `CLUSTER_NAME="sno"` to sno and you will see how the url now contains `sno` in the name instead of `ocp`.
 
 That's all! Execute it now and you will see the magic!! 🪄
-
 
 
 Here, you can check the [official documentation](https://docs.openshift.com/container-platform/4.16/installing/installing_sno/install-sno-installing-sno.html#install-sno-monitoring-the-installation-manually_install-sno-installing-sno-with-the-assisted-installer) if you want to make further customizations.
@@ -127,6 +127,11 @@ Once you need to **start the EC2 cluster instances** again, run:
 Ex: `./aws-ocp4-start-ec2.sh  ~/ocp4-sandbox932`
 
 Keep also in mind that if you **don't need the cluster anymore, please, deprovision it!!!**
+
+
+## OpenShift GitOps deployment
+
+Currently all the clusters are configured using GitOps with ArgoCD. Therefore, I think that it is time to help customers to directly install ArgoCD right after installation. For that purpose, there is a new env var `INSTALL_OPENSHIFT_GITOPS` that will trigger the same installation that I provide in [alvarolop/ocp-gitops-playground](https://github.com/alvarolop/ocp-gitops-playground/tree/main).
 
 
 # Annex: Add users to OCP cluster after install

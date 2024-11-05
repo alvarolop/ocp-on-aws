@@ -33,7 +33,7 @@ export AWS_DEFAULT_REGION="eu-west-1"
 RHOCM_PULL_SECRET=''
 
 # This is the base URL to download both CLI and installer. You are not supposed to modify it unless you need to experiment nightly releases.
-OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
+OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/openshift-v4/clients/ocp"
 
 # AWS Bastion Security Group Name
 # AWS_BASTION_SG_NAME="BastionSG"
@@ -64,6 +64,7 @@ MASTER_INSTANCE_TYPE=m7i.xlarge
 WORKDIR="$(pwd)/ocp4-sandbox${RHPDS_GUID}"
 # OCP SSL Certificates
 INSTALL_LETS_ENCRYPT_CERTIFICATES=True
+INSTALL_OPENSHIFT_GITOPS=True
 CLUSTER_WORKDIR="${WORKDIR}"
 
 

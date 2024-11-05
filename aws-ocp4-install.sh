@@ -23,6 +23,10 @@ function checkVariable {
 # VARS
 source $CONFIG_FILE
 
+OPERATOR_NAMESPACE="openshift-gitops-operator"
+ARGOCD_NAMESPACE="gitops"
+ARGOCD_CLUSTER_NAME="argocd"
+
 ### PREREQUISITES ### 
 checkVariable "AWS_ACCESS_KEY_ID"
 checkVariable "AWS_SECRET_ACCESS_KEY"
@@ -140,9 +144,40 @@ else
     echo "Please, check user provisioning manually using kubeadmin user" 
 fi
 
-if [ $INSTALL_LETS_ENCRYPT_CERTIFICATES = "True" ]; then
-    sleep 30
+if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+    sleep 10
     source ./aws-ocp4-install-certs.sh $CONFIG_FILE
+fi
+
+if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+
+    # Install OpenShift GitOps operator
+    echo -e "\n[1/3]Install OpenShift GitOps operator"
+
+    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/01-operator.yaml \
+        -p OPERATOR_NAMESPACE=$OPERATOR_NAMESPACE | oc apply -f -
+
+    echo -n "Waiting for pods ready..."
+    while [[ $(oc get pods -l control-plane=gitops-operator -n $OPERATOR_NAMESPACE -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+
+    # Deploy the ArgoCD instance
+    echo -e "\n[2/3]Deploy the ArgoCD instance"
+    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/02-argocd.yaml \
+        -p ARGOCD_NAMESPACE=$ARGOCD_NAMESPACE \
+        -p ARGOCD_CLUSTER_NAME="$ARGOCD_CLUSTER_NAME" | oc apply -f -
+
+    # Wait for DeploymentConfig
+    echo -n "Waiting for pods ready..."
+    while [[ $(oc get pods -l app.kubernetes.io/name=${ARGOCD_CLUSTER_NAME}-server -n $ARGOCD_NAMESPACE -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+
+    ARGOCD_ROUTE=$(oc get routes $ARGOCD_CLUSTER_NAME-server -n $ARGOCD_NAMESPACE --template="https://{{.spec.host}}")
+
+    # Create the ArgoCD ConsoleLink
+    echo -e "\n[3/3]Create the ArgoCD ConsoleLink"
+    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/03-consolelink.yaml \
+        -p ARGOCD_ROUTE=$ARGOCD_ROUTE \
+        -p ARGOCD_NAMESPACE=$ARGOCD_NAMESPACE \
+        -p ARGOCD_CLUSTER_NAME="$ARGOCD_CLUSTER_NAME" | oc apply -f -
 fi
 
 # Print values to access the cluster
