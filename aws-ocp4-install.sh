@@ -145,11 +145,19 @@ else
 fi
 
 if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+
+    echo -e "\n==============================="
+    echo -e "=     INSTALL CERTIFICATES    ="
+    echo -e "===============================\n"
     sleep 10
     source ./aws-ocp4-install-certs.sh $CONFIG_FILE
 fi
 
 if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+
+    echo -e "\n==============================="
+    echo -e "=      INSTALL OCP GITOPS     ="
+    echo -e "===============================\n"
 
     # Install OpenShift GitOps operator
     echo -e "\n[1/3]Install OpenShift GitOps operator"
