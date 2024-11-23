@@ -27,6 +27,9 @@ OPERATOR_NAMESPACE="openshift-gitops-operator"
 ARGOCD_NAMESPACE="gitops"
 ARGOCD_CLUSTER_NAME="argocd"
 
+K_DEFAULT_USER="redhat"
+K_DEFAULT_PASSWD="redhat!1"
+
 ### PREREQUISITES ### 
 checkVariable "AWS_ACCESS_KEY_ID"
 checkVariable "AWS_SECRET_ACCESS_KEY"
@@ -122,26 +125,42 @@ OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
 echo "Cluster api url: $OCP_API"
 sleep 5
 $CLUSTER_WORKDIR/oc login -u kubeadmin -p $KUBEADMIN_PASSWORD $OCP_API --insecure-skip-tls-verify=true
-$CLUSTER_WORKDIR/oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd=auth/users.htpasswd
+$CLUSTER_WORKDIR/oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd="${HTPASSWD_PATH:-auth/users.htpasswd}"
 $CLUSTER_WORKDIR/oc apply -f auth/htpasswd_oauth.yaml
 echo "Waiting some time to get OAuth configured..."
 sleep 30
 # Create all the cluster admins
-$CLUSTER_WORKDIR/oc apply -f auth/group-cluster-admins.yaml
+$CLUSTER_WORKDIR/oc apply -f "${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml}"
 $CLUSTER_WORKDIR/oc apply -f auth/clusterrolebinding-cluster-admins.yaml
 
-# Do not add redhat as a group, but directly admin (It does not inherit access to gitOps)
-$CLUSTER_WORKDIR/oc adm policy add-cluster-role-to-user cluster-admin redhat
+# Do not add default user as a group, but directly admin (It does not inherit access to gitOps)
+$CLUSTER_WORKDIR/oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
 
+# auth
 echo -n "Waiting for authentication configuration to be ready..."
-while ! $CLUSTER_WORKDIR/oc login -u redhat -p 'redhat!1' $OCP_API --insecure-skip-tls-verify=true &> /dev/null; do   echo -n "." && sleep 1; done; echo -n -e " [OK]\n"
 
-if [ $? -eq 0 ]; then
+MAX_ATTEMPTS=${MAX_ATTEMPTS:-25}
+ATTEMPT=0
+K_LOGIN_SUCCESS=-1
+
+while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+    if $CLUSTER_WORKDIR/oc login -u ${K_DEFAULT_USER} -p ${K_DEFAULT_PASSWD} $OCP_API --insecure-skip-tls-verify=true &> /dev/null; then
+        K_LOGIN_SUCCESS=0
+        break
+    fi
+    echo -n "."
+    ATTEMPT=$((ATTEMPT + 1))
+    sleep 5
+done
+
+if [ $K_LOGIN_SUCCESS -eq 0 ]; then
+    echo -e " [OK]"
     echo "Deleting kubeadmin password in cluster $OCP_API"
     $CLUSTER_WORKDIR/oc delete secret kubeadmin -n kube-system
 else
-    echo "WARN: Could not login using redhat user in cluster $OCP_API" 
-    echo "Please, check user provisioning manually using kubeadmin user" 
+    echo -e "\nERROR: Could not login using ${K_DEFAULT_USER} user in cluster $OCP_API after $MAX_ATTEMPTS attempts."
+    echo "Please, check user provisioning manually using kubeadmin user."
+    K_DEFAULT_USER="kubeadmin"
 fi
 
 if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
@@ -198,5 +217,5 @@ echo "Installation finished!!!"
 echo ""
 echo "You can access the cluster using the console or the CLI"
 echo -e "\t* Web: $OCP_CONSOLE"
-echo -e "\t* CLI: oc login -u redhat $OCP_API # You can use any other user"
+echo -e "\t* CLI: oc login -u ${K_DEFAULT_USER} $OCP_API # You can use any other user"
 echo ""
