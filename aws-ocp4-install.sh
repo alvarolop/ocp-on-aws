@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# exec examples
+# ./aws-ocp4-install.sh aws-ocp4-config
+# GROUP_FILE_PATH=auth/other-group-cluster-admins.yaml HTPASSWD_PATH=auth/other-users.htpasswd ./aws-ocp4-install.sh aws-ocp4-config
+
 set -e
 # set -x
 
@@ -13,13 +17,6 @@ case "${UNAMEOUT}" in
     Darwin*)    os=mac;;
 esac
 
-function checkVariable {
-    if [[ -z ${!1} ]]; then
-        echo "Must provide $1 in environment!" 1>&2
-        exit 1
-    fi
-}
-
 # VARS
 source $CONFIG_FILE
 
@@ -29,6 +26,20 @@ ARGOCD_CLUSTER_NAME="argocd"
 
 K_DEFAULT_USER="redhat"
 K_DEFAULT_PASSWD="redhat!1"
+
+OC_PATH="$CLUSTER_WORKDIR/oc"
+
+# functs
+function checkVariable {
+    if [[ -z ${!1} ]]; then
+        echo "Must provide $1 in environment!" 1>&2
+        exit 1
+    fi
+}
+
+function oc() {
+   $OC_PATH "$@"
+}
 
 ### PREREQUISITES ### 
 checkVariable "AWS_ACCESS_KEY_ID"
@@ -56,7 +67,6 @@ echo AWS_BASTION_SG_NAME=$AWS_BASTION_SG_NAME
 echo AWS_SUBNET_NAME=$AWS_SUBNET_NAME
 echo INSTALL_LETS_ENCRYPT_CERTIFICATES=$INSTALL_LETS_ENCRYPT_CERTIFICATES
 echo ------------------------------------
-
 
 # #### AWS ####
 
@@ -124,17 +134,17 @@ echo "kubeadmin password: $KUBEADMIN_PASSWORD"
 OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
 echo "Cluster api url: $OCP_API"
 sleep 5
-$CLUSTER_WORKDIR/oc login -u kubeadmin -p $KUBEADMIN_PASSWORD $OCP_API --insecure-skip-tls-verify=true
-$CLUSTER_WORKDIR/oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd="${HTPASSWD_PATH:-auth/users.htpasswd}"
-$CLUSTER_WORKDIR/oc apply -f auth/htpasswd_oauth.yaml
+oc login -u kubeadmin -p $KUBEADMIN_PASSWORD $OCP_API --insecure-skip-tls-verify=true
+oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd="${HTPASSWD_PATH:-auth/users.htpasswd}"
+oc apply -f auth/htpasswd_oauth.yaml
 echo "Waiting some time to get OAuth configured..."
 sleep 30
 # Create all the cluster admins
-$CLUSTER_WORKDIR/oc apply -f "${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml}"
-$CLUSTER_WORKDIR/oc apply -f auth/clusterrolebinding-cluster-admins.yaml
+oc apply -f "${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml}"
+oc apply -f auth/clusterrolebinding-cluster-admins.yaml
 
 # Do not add default user as a group, but directly admin (It does not inherit access to gitOps)
-$CLUSTER_WORKDIR/oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
+oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
 
 # auth
 echo -n "Waiting for authentication configuration to be ready..."
@@ -144,7 +154,7 @@ ATTEMPT=0
 K_LOGIN_SUCCESS=-1
 
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if $CLUSTER_WORKDIR/oc login -u ${K_DEFAULT_USER} -p ${K_DEFAULT_PASSWD} $OCP_API --insecure-skip-tls-verify=true &> /dev/null; then
+    if oc login -u ${K_DEFAULT_USER} -p ${K_DEFAULT_PASSWD} $OCP_API --insecure-skip-tls-verify=true &> /dev/null; then
         K_LOGIN_SUCCESS=0
         break
     fi
@@ -156,7 +166,7 @@ done
 if [ $K_LOGIN_SUCCESS -eq 0 ]; then
     echo -e " [OK]"
     echo "Deleting kubeadmin password in cluster $OCP_API"
-    $CLUSTER_WORKDIR/oc delete secret kubeadmin -n kube-system
+    oc delete secret kubeadmin -n kube-system
 else
     echo -e "\nERROR: Could not login using ${K_DEFAULT_USER} user in cluster $OCP_API after $MAX_ATTEMPTS attempts."
     echo "Please, check user provisioning manually using kubeadmin user."
