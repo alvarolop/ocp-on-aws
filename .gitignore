@@ -1,4 +1,5 @@
 aws-ocp4-config-*
 ocp4-sandbox*
-auth/group-cluster-admins.yaml
-auth/users.htpasswd
+!auth/*.example
+auth/*group-cluster-admins.yaml
+auth/*.htpasswd
