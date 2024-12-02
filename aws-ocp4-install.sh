@@ -47,6 +47,20 @@ checkVariable "AWS_SECRET_ACCESS_KEY"
 checkVariable "AWS_DEFAULT_REGION"
 checkVariable "INSTALL_LETS_ENCRYPT_CERTIFICATES"
 
+if command -v htpasswd &> /dev/null; then
+    if ! htpasswd -vb auth/users.htpasswd $K_DEFAULT_USER $K_DEFAULT_PASSWD; then
+        echo "Password verification failed for user $K_DEFAULT_USER or user does not exist"
+        exit 1
+    else
+        echo "User / password verification went well."
+    fi
+else
+    echo "htpasswd command not found"
+    echo "You should install it if you want this verification."
+    echo "In Fedora: sudo dnf install httpd-tools"
+    echo ""
+fi
+
 #### Print Variables ####
 echo
 echo ------------------------------------
@@ -94,27 +108,32 @@ tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/oc.tar.gz
 chmod +x $CLUSTER_WORKDIR/oc
 
+sleep 5
+
 #### CREATE USERS ####
 
-KUBEADMIN_PASSWORD=`grep kubeadmin $CLUSTER_WORKDIR/.openshift_install.log | grep password | awk -Fpassword: '{print $2}' | sed 's/\\\""//' | sed 's/\\\"//' | sed 's/\ //'`
-echo "kubeadmin password: $KUBEADMIN_PASSWORD"
+echo -e "\n==============================="
+echo -e "=   Configure authentication  ="
+echo -e "===============================\n"
+
+KUBEADMIN_PASSWORD=$(cat "$CLUSTER_WORKDIR/auth/kubeadmin-password")
 OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
-echo "Cluster api url: $OCP_API"
-sleep 5
+
+echo -e "\t- kubeadmin password: $KUBEADMIN_PASSWORD"
+echo -e "\t- Cluster api url: $OCP_API"
+
 oc login -u kubeadmin -p $KUBEADMIN_PASSWORD $OCP_API --insecure-skip-tls-verify=true
-oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd="${HTPASSWD_PATH:-auth/users.htpasswd}"
-oc apply -f auth/htpasswd_oauth.yaml
+
+oc apply -k auth
+
 echo "Waiting some time to get OAuth configured..."
 sleep 30
-# Create all the cluster admins
-oc apply -f "${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml}"
-oc apply -f auth/clusterrolebinding-cluster-admins.yaml
 
 # Do not add default user as a group, but directly admin (It does not inherit access to gitOps)
 oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
 
 # auth
-echo -n "Waiting for authentication configuration to be ready..."
+echo -n "\nWaiting for authentication configuration to be ready..."
 
 MAX_ATTEMPTS=${MAX_ATTEMPTS:-25}
 ATTEMPT=0
@@ -186,7 +205,6 @@ fi
 
 # Print values to access the cluster
 
-OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
 OCP_CONSOLE=https://console-openshift-console.apps.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN
 
 echo -e "\n==============================="

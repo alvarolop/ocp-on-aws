@@ -4,6 +4,7 @@ This repository contains a set of scripts that would facilitate the provisioning
 
 - [OCP 4 basic installation on AWS](#ocp-4-basic-installation-on-aws)
   - [Prerequisites](#prerequisites)
+    - [0. Command line utilities](#0-command-line-utilities)
     - [1. AWS account](#1-aws-account)
     - [2. Authentication configuration](#2-authentication-configuration)
     - [3. Add it all to the config file](#3-add-it-all-to-the-config-file)
@@ -21,6 +22,11 @@ This repository contains a set of scripts that would facilitate the provisioning
 
 
 ## Prerequisites
+
+### 0. Command line utilities
+
+* The certificates installation is based on `podman`, so please install `podman` cli prior to execute this script if you want the certificates configured. Check the [documentation](https://podman.io/docs/installation) for the installation mechanism on your system
+* If you want to define your own users, you will need to use the `htpasswd` cli. This command is provided by the `httpd-tools` package on RHEL/Fedora systems. If not, you can just use the example `users.htpasswd` file that has the `redhat` user with password `redhat!1`.
 
 ### 1. AWS account
 
@@ -153,6 +159,7 @@ oc delete secret htpass-secret -n openshift-config
 oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd=auth/users.htpasswd
 oc adm policy add-cluster-role-to-user cluster-admin myusername
 ```
+
 
 
 
