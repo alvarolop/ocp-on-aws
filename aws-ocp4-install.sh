@@ -10,11 +10,10 @@ set -e
 CONFIG_FILE=$1
 
 ## Check if mac or linux
-UNAMEOUT=$(uname -s)
-
-case "${UNAMEOUT}" in
-    Linux*)     os=linux;;
-    Darwin*)    os=mac;;
+case "$(uname -s)" in
+    Linux*)  os=linux;;
+    Darwin*) os=mac;;
+    *)       os=unknown;;
 esac
 
 # VARS
@@ -27,9 +26,13 @@ ARGOCD_CLUSTER_NAME="argocd"
 K_DEFAULT_USER="redhat"
 K_DEFAULT_PASSWD="redhat!1"
 
-OC_PATH="$CLUSTER_WORKDIR/oc"
 
 # functs
+OC_PATH="$CLUSTER_WORKDIR/oc"
+function oc() {
+   $OC_PATH "$@"
+}
+
 function checkVariable {
     if [[ -z ${!1} ]]; then
         echo "Must provide $1 in environment!" 1>&2
@@ -37,9 +40,6 @@ function checkVariable {
     fi
 }
 
-function oc() {
-   $OC_PATH "$@"
-}
 
 ### PREREQUISITES ### 
 checkVariable "AWS_ACCESS_KEY_ID"
@@ -59,12 +59,7 @@ echo CLUSTER_NAME=$CLUSTER_NAME
 echo AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 echo AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 echo AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
-echo AWS_AMI=$AWS_AMI
 echo RHOCM_PULL_SECRET=$RHOCM_PULL_SECRET
-echo RHPDS_SSH_PASSWORD=$RHPDS_SSH_PASSWORD
-echo OCP_DOWNLOAD_BASE_URL=$OCP_DOWNLOAD_BASE_URL
-echo AWS_BASTION_SG_NAME=$AWS_BASTION_SG_NAME
-echo AWS_SUBNET_NAME=$AWS_SUBNET_NAME
 echo INSTALL_LETS_ENCRYPT_CERTIFICATES=$INSTALL_LETS_ENCRYPT_CERTIFICATES
 echo ------------------------------------
 
@@ -73,32 +68,6 @@ echo ------------------------------------
 echo "Installation directoy is $CLUSTER_WORKDIR"
 
 mkdir -p $CLUSTER_WORKDIR
-
-# Check if the OS is Linux
-if [[ "$os" == "linux"* ]]; then
-
-    curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o $CLUSTER_WORKDIR/awscliv2.zip
-    unzip -q $CLUSTER_WORKDIR/awscliv2.zip -d $CLUSTER_WORKDIR
-    rm -f $CLUSTER_WORKDIR/awscliv2.zip
-
-    $CLUSTER_WORKDIR/aws/install --bin-dir $CLUSTER_WORKDIR/aws/bin --install-dir $CLUSTER_WORKDIR/aws
-
-    $CLUSTER_WORKDIR/aws/bin/aws --version
-
-    ### AWS CONFIG ###
-
-    $CLUSTER_WORKDIR/aws/bin/aws sts get-caller-identity
-
-else
-    if ! which aws &> /dev/null; then 
-        echo "You need the AWS CLI to run this Quickstart, please, refer to the official documentation:"
-        echo -e "\thttps://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-        exit 1
-    fi
-
-    aws --version
-    aws sts get-caller-identity --region $AWS_DEFAULT_REGION
-fi
 
 #### OCP INSTALLER ####
 
@@ -116,13 +85,11 @@ cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$(echo $RHPDS_
 
 #### OCP INSTALLATION ####
 
-$CLUSTER_WORKDIR/openshift-install --dir  $CLUSTER_WORKDIR create cluster  --log-level debug
+$CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-level debug
 
 #### OC CLI ####
 
-OC_CLI_VERSION=$OPENSHIFT_VERSION
-
-curl -k "${OCP_DOWNLOAD_BASE_URL}/${OC_CLI_VERSION}/openshift-client-${os}-${OC_CLI_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
+curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
 tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/oc.tar.gz
 chmod +x $CLUSTER_WORKDIR/oc
@@ -222,10 +189,10 @@ fi
 OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
 OCP_CONSOLE=https://console-openshift-console.apps.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN
 
-echo ""
-echo "Installation finished!!!"
-echo ""
-echo "You can access the cluster using the console or the CLI"
+echo -e "\n==============================="
+echo -e "=   Installation finished!!!  ="
+echo -e "===============================\n"
+echo -e "\nYou can access the cluster using the console or the CLI"
 echo -e "\t* Web: $OCP_CONSOLE"
 echo -e "\t* CLI: oc login -u ${K_DEFAULT_USER} $OCP_API # You can use any other user"
 echo ""
