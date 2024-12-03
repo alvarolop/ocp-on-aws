@@ -24,22 +24,12 @@ export AWS_SECRET_ACCESS_KEY=""
 # https://docs.openshift.com/container-platform/4.15/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
 export AWS_DEFAULT_REGION="eu-west-1"
 
-# AWS AMI EC2 instance AMI
-# https://docs.openshift.com/container-platform/4.15/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
-# AWS_AMI="ami-0faeeeb3d2b1aa07c"
-
 # Enter Pull Secret given from RedHat OpenShift Cluster Manager site (https://console.redhat.com/openshift/downloads#tool-pull-secret) for an AWS IPI installation
 # WARNING: FILL THE PULL SECRET BETWEEN SINGLE QUOTES HERE!
 RHOCM_PULL_SECRET=''
 
 # This is the base URL to download both CLI and installer. You are not supposed to modify it unless you need to experiment nightly releases.
 OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
-
-# AWS Bastion Security Group Name
-# AWS_BASTION_SG_NAME="BastionSG"
-
-# AWS Subnet Name
-# AWS_SUBNET_NAME="sandbox-${RHPDS_GUID}"
 
 # Machines configuration
 # https://aws.amazon.com/ec2/instance-types/
@@ -60,12 +50,9 @@ MASTER_INSTANCE_TYPE=m7i.xlarge
 
 
 
-# Extra configuration
-WORKDIR="$(pwd)/ocp4-sandbox${RHPDS_GUID}"
-# OCP SSL Certificates
-INSTALL_LETS_ENCRYPT_CERTIFICATES=True
-INSTALL_OPENSHIFT_GITOPS=True
-CLUSTER_WORKDIR="${WORKDIR}"
+# OCP SSL Certificates and GitOps configuration
+INSTALL_LETS_ENCRYPT_CERTIFICATES="true"
+INSTALL_OPENSHIFT_GITOPS="true"
 
 
 # ./aws-ocp4-install.sh ./aws-ocp4-config

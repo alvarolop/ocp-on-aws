@@ -19,6 +19,10 @@ esac
 # VARS
 source $CONFIG_FILE
 
+# Extra configuration
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLUSTER_WORKDIR="${BASE_DIR}/ocp4-sandbox${RHPDS_GUID}"
+
 OPERATOR_NAMESPACE="openshift-gitops-operator"
 ARGOCD_NAMESPACE="gitops"
 ARGOCD_CLUSTER_NAME="argocd"
@@ -124,7 +128,7 @@ echo -e "=============================\n"
 echo "Installation directoy is $CLUSTER_WORKDIR"
 
 mkdir -p $CLUSTER_WORKDIR
-echo "$K_DEFAULT_PASSWD" > $CLUSTER_WORKDIR/default-user-password
+echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
 
 #### OCP INSTALLER ####
 
