@@ -124,6 +124,7 @@ echo -e "=============================\n"
 echo "Installation directoy is $CLUSTER_WORKDIR"
 
 mkdir -p $CLUSTER_WORKDIR
+echo "$K_DEFAULT_PASSWD" > $CLUSTER_WORKDIR/default-user-password
 
 #### OCP INSTALLER ####
 

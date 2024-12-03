@@ -43,6 +43,8 @@ In order to install OpenShift on AWS using IPI (Installer-Provisioned Infrastruc
 
 ### 2. Authentication configuration
 
+TIP: There is a shortcut for this section. If you don't want to define your own users. Leave the `users.htpasswd` and `group-cluster-admins.yaml` files undefined. The automation will create a temporary `htpasswd` file for a random password for a `redhat` user. This user will be `cluster-admin` in your installation.
+
 This automation will automatically create certain users on the cluster and add then to the `cluster-admin` role. In order to automate that, you have the `auth` folder with all the configuration. Please, you need to update two files:
 
 * Copy the `users.htpasswd.example` file to `users.htpasswd` inside the `auth` folder to store the hash credentials. You can add users with the following command: `htpasswd -b -B auth/users.htpasswd myusername mypassword`.
@@ -159,7 +161,6 @@ oc delete secret htpass-secret -n openshift-config
 oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd=auth/users.htpasswd
 oc adm policy add-cluster-role-to-user cluster-admin myusername
 ```
-
 
 
 
