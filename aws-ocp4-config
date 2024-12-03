@@ -2,7 +2,7 @@
 # CHECK VARIABLE VALUES ARE BETWEEN DOUBLE QUOTES!
 
 # OpenShift version (must be 4.x.z format)
-# https://mirror.openshift.com/pub/openshift-v4/clients/ocp
+# https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
 OPENSHIFT_VERSION="4.17.3"
 
 # Enter here your RHPDS Lab GUID
@@ -33,7 +33,7 @@ export AWS_DEFAULT_REGION="eu-west-1"
 RHOCM_PULL_SECRET=''
 
 # This is the base URL to download both CLI and installer. You are not supposed to modify it unless you need to experiment nightly releases.
-OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/openshift-v4/clients/ocp"
+OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
 
 # AWS Bastion Security Group Name
 # AWS_BASTION_SG_NAME="BastionSG"

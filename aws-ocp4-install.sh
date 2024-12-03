@@ -5,7 +5,7 @@
 # GROUP_FILE_PATH=auth/other-group-cluster-admins.yaml HTPASSWD_PATH=auth/other-users.htpasswd ./aws-ocp4-install.sh aws-ocp4-config
 
 set -e
-# set -x
+set -x
 
 CONFIG_FILE=$1
 
@@ -24,7 +24,7 @@ ARGOCD_NAMESPACE="gitops"
 ARGOCD_CLUSTER_NAME="argocd"
 
 K_DEFAULT_USER="redhat"
-K_DEFAULT_PASSWD="${K_DEFAULT_PASSWD:-redhat!1}"
+K_DEFAULT_PASSWD="${K_DEFAULT_PASSWD:-ffl4l0ca6eype6b}"
 
 # functs
 OC_PATH="$CLUSTER_WORKDIR/oc"
@@ -44,6 +44,11 @@ function generate_random_password {
     tr -dc 'a-z0-9' </dev/urandom | head -c 15
 }
 
+function show_tmp_credentials {
+    rm $HTPASSWD_PATH
+    echo "The password is $K_DEFAULT_PASSWD and is stored in this temp htpasswd file $HTPASSWD_PATH"
+}
+
 echo -e "\n================="
 echo -e "=   PRE-CHECKS  ="
 echo -e "=================\n"
@@ -54,7 +59,10 @@ checkVariable "AWS_ACCESS_KEY_ID"
 checkVariable "AWS_SECRET_ACCESS_KEY"
 checkVariable "AWS_DEFAULT_REGION"
 checkVariable "INSTALL_LETS_ENCRYPT_CERTIFICATES"
+checkVariable "INSTALL_OPENSHIFT_GITOPS"
 
+
+# Check if the users file exists. If not, generate a temporary one and share the password at the end.
 if [ -f ${HTPASSWD_PATH:-auth/users.htpasswd} ]; then
 
     echo -e "\nThe users htpasswd file exists."
@@ -62,11 +70,14 @@ if [ -f ${HTPASSWD_PATH:-auth/users.htpasswd} ]; then
 else 
     echo -e "\nThe users file does not exist, we will generate a user/password file."
     K_DEFAULT_PASSWD=$(generate_random_password)
-    users_file=$(mktemp -t users.htpasswd_${f})
-    htpasswd -b -B $users_file redhat $K_DEFAULT_PASSWD
+    HTPASSWD_PATH=$(mktemp -t users.htpasswd.XXXXXXXXXX)
+    htpasswd -b -B $HTPASSWD_PATH redhat $K_DEFAULT_PASSWD
+    echo "The password is $K_DEFAULT_PASSWD and is stored in this temp htpasswd file $HTPASSWD_PATH, which contents are: "
+    cat $HTPASSWD_PATH
+    trap show_tmp_credentials EXIT
 fi 
 
-
+# Check if the user / password is correct, so that auth section works fine.
 if command -v htpasswd &> /dev/null; then
     if ! htpasswd -vb "${HTPASSWD_PATH:-auth/users.htpasswd}" $K_DEFAULT_USER $K_DEFAULT_PASSWD; then
         echo "Password verification failed for user $K_DEFAULT_USER or user does not exist"
@@ -79,12 +90,7 @@ else
     echo "In Fedora: sudo dnf install httpd-tools"
 fi
 
-if command -v podman &>/dev/null; then
-    echo "Podman is installed."
-else
-    echo "Podman is not installed."
-fi
-
+# Check that the podman cli is installed if you want the certificates.
 if ! command -v podman &>/dev/null && [[ ${INSTALL_LETS_ENCRYPT_CERTIFICATES} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     echo "Podman is not installed, and INSTALL_LETS_ENCRYPT_CERTIFICATES is set to True/Yes/1."
     echo "Exiting. Please, install podman."
@@ -102,8 +108,8 @@ echo CLUSTER_NAME=$CLUSTER_NAME
 echo AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 echo AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 echo AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
-echo RHOCM_PULL_SECRET=$RHOCM_PULL_SECRET
 echo INSTALL_LETS_ENCRYPT_CERTIFICATES=$INSTALL_LETS_ENCRYPT_CERTIFICATES
+echo INSTALL_OPENSHIFT_GITOPS=$INSTALL_OPENSHIFT_GITOPS
 echo ------------------------------------
 
 
