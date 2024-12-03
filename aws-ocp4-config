@@ -3,7 +3,7 @@
 
 # OpenShift version (must be 4.x.z format)
 # https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
-OPENSHIFT_VERSION="4.17.3"
+OPENSHIFT_VERSION="4.17.7"
 
 # Enter here your RHPDS Lab GUID
 RHPDS_GUID="XXXX" # It has two be a number 1 < X < 9999!
