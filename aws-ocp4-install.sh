@@ -71,6 +71,7 @@ else
     echo -e "\nThe users file does not exist, we will generate a user/password file."
     K_DEFAULT_PASSWD=$(generate_random_password)
     HTPASSWD_PATH=$(mktemp -t users.htpasswd.XXXXXXXXXX)
+    GROUP_FILE_PATH=${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml.example}
     htpasswd -b -B $HTPASSWD_PATH redhat $K_DEFAULT_PASSWD
     echo "The password is $K_DEFAULT_PASSWD and is stored in this temp htpasswd file $HTPASSWD_PATH, which contents are: "
     cat $HTPASSWD_PATH
