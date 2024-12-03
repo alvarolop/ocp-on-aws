@@ -125,6 +125,13 @@ tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/openshift-install.tar.gz
 chmod +x $CLUSTER_WORKDIR/openshift-install
 
+#### OC CLI ####
+
+curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
+tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
+rm -f $CLUSTER_WORKDIR/oc.tar.gz
+chmod +x $CLUSTER_WORKDIR/oc
+
 #### OCP CONFIG ####
 cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$(echo $RHPDS_TOP_LEVEL_ROUTE53_DOMAIN) CLUSTER_NAME=$(echo $CLUSTER_NAME) \
   AWS_DEFAULT_REGION=$(echo $AWS_DEFAULT_REGION) RHOCM_PULL_SECRET=$(echo $RHOCM_PULL_SECRET) \
@@ -135,13 +142,6 @@ cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$(echo $RHPDS_
 #### OCP INSTALLATION ####
 
 $CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-level debug
-
-#### OC CLI ####
-
-curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
-tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
-rm -f $CLUSTER_WORKDIR/oc.tar.gz
-chmod +x $CLUSTER_WORKDIR/oc
 
 sleep 5
 
