@@ -5,7 +5,7 @@
 # GROUP_FILE_PATH=auth/other-group-cluster-admins.yaml HTPASSWD_PATH=auth/other-users.htpasswd ./aws-ocp4-install.sh aws-ocp4-config
 
 set -e
-set -x
+# set -x
 
 CONFIG_FILE=$1
 
