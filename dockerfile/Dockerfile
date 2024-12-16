@@ -21,10 +21,10 @@ RUN curl -L "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OC_VERS
 RUN aws --version && oc version
 
 # Add a user
-RUN useradd -m -d /home/kni -s /bin/bash kni
+RUN useradd -m -u 1000 -d /home/kni -s /bin/bash kni
 
 # Set the user to run the container
-USER kni
+USER 1000
 
 # Specify the working directory for the new user
 WORKDIR /home/kni
