@@ -1,8 +1,8 @@
-FROM registry.access.redhat.com/ubi9-minimal:latest
+FROM registry.access.redhat.com/ubi9:latest
 
 # Install dependencies
-RUN microdnf install -y unzip tar gzip openssh openssh-clients rsync \
-    && microdnf clean all
+RUN dnf install -y unzip tar gzip openssh openssh-clients rsync \
+    && dnf clean all
 
 # Install AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
