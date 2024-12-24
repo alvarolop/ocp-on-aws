@@ -263,9 +263,9 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
     # Configure API and Ingress certificates (It user the $CLUSTER_DOMAIN defined previously)
     # Retrieve the cluster domain
-    export CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}')
-    curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-cert-manager-route53.yaml | envsubst | oc apply -f -
+    curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-cert-manager-route53.yaml | CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') envsubst | oc apply -f -
 
+    sleep 10 # Wait for the Certificates to be created in the cluster
 
     echo -ne "\nWaiting for ocp-api certificate to be ready..."
     while [[ $(oc get certificate ocp-api -n openshift-config -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 5; done; echo -n -e "  [OK]\n"
@@ -303,10 +303,14 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
 fi
 
+# Print values to access the cluster
+
+OCP_CONSOLE=https://console-openshift-console.apps.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN
+
 echo -e "\n==============================="
 echo -e "=   Installation finished!!!  ="
 echo -e "===============================\n"
 echo -e "\nYou can access the cluster using the console or the CLI"
-echo -e "\t* Web: https://console-openshift-console.apps.$CLUSTER_DOMAIN"
+echo -e "\t* Web: $OCP_CONSOLE"
 echo -e "\t* CLI: oc login -u ${K_DEFAULT_USER} $OCP_API # You can use any other user"
 echo ""
