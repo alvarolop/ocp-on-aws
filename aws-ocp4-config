@@ -3,7 +3,7 @@
 
 # OpenShift version (must be 4.x.z format)
 # https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
-OPENSHIFT_VERSION="4.17.7"
+OPENSHIFT_VERSION="4.17.10"
 
 # Enter here your RHPDS Lab GUID
 RHPDS_GUID="XXXX" # It has two be a number 1 < X < 9999!
@@ -39,20 +39,19 @@ OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp
 
 # Option 1: Multi-node OCP
 WORKER_INSTANCE_TYPE=m7i.2xlarge # Normal worker nodes
-# WORKER_INSTANCE_TYPE=m6id.4xlarge # ODF nodes
+# WORKER_INSTANCE_TYPE=m6id.4xlarge # ODF nodes with LSO
 WORKER_REPLICAS=1
 MASTER_INSTANCE_TYPE=m7i.xlarge
 
-# Option 2: Single-node OCP
+# # Option 2: Single-node OCP
 # WORKER_REPLICAS=0
 # MASTER_INSTANCE_TYPE=m7i.4xlarge
 # MASTER_REPLICAS=1
 
 
-
 # OCP SSL Certificates and GitOps configuration
-INSTALL_LETS_ENCRYPT_CERTIFICATES="true"
-INSTALL_OPENSHIFT_GITOPS="true"
+INSTALL_LETS_ENCRYPT_CERTIFICATES=true
+INSTALL_OPENSHIFT_GITOPS=true
 
 
-# ./aws-ocp4-install.sh ./aws-ocp4-config
+# ./aws-ocp4-install.sh ./aws-ocp4-config-labs

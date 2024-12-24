@@ -210,15 +210,6 @@ else
     K_DEFAULT_USER="kubeadmin"
 fi
 
-if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
-
-    echo -e "\n==============================="
-    echo -e "=     INSTALL CERTIFICATES    ="
-    echo -e "===============================\n"
-    sleep 10
-    source ./aws-ocp4-install-certs.sh $CONFIG_FILE
-fi
-
 if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
     echo -e "\n==============================="
@@ -252,6 +243,15 @@ if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
         -p ARGOCD_ROUTE=$ARGOCD_ROUTE \
         -p ARGOCD_NAMESPACE=$ARGOCD_NAMESPACE \
         -p ARGOCD_CLUSTER_NAME="$ARGOCD_CLUSTER_NAME" | oc apply -f -
+fi
+
+if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+
+    echo -e "\n==============================="
+    echo -e "=     INSTALL CERTIFICATES    ="
+    echo -e "===============================\n"
+    sleep 10
+    source ./aws-ocp4-install-certs.sh $CONFIG_FILE
 fi
 
 # Print values to access the cluster
