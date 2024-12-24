@@ -157,8 +157,6 @@ $CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-l
 
 sleep 5
 
-# Retrieve the cluster domain
-CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}')
 
 #### CREATE USERS ####
 
@@ -167,7 +165,7 @@ echo -e "=   Configure authentication  ="
 echo -e "===============================\n"
 
 KUBEADMIN_PASSWORD=$(cat "$CLUSTER_WORKDIR/auth/kubeadmin-password")
-OCP_API=https://api.$CLUSTER_DOMAIN:6443
+OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
 
 echo -e "\t- kubeadmin password: $KUBEADMIN_PASSWORD"
 echo -e "\t- Cluster api url: $OCP_API"
@@ -187,7 +185,7 @@ echo "Waiting some time to get OAuth configured..."
 sleep 30
 
 # auth
-echo -n "\nWaiting for authentication configuration to be ready..."
+echo -en "\nWaiting for authentication configuration to be ready..."
 
 MAX_ATTEMPTS=${MAX_ATTEMPTS:-25}
 ATTEMPT=0
@@ -261,10 +259,21 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     while [[ $(oc get pods -l name=cert-manager-operator -n cert-manager-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
 
     echo -n "Waiting for cert-manager pods to be ready..."
-    while [[ $(oc get pods -l app.kubernetes.io/instance=cert-manager -n cert-manager -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+    while [[ $(oc get pods -l app.kubernetes.io/instance=cert-manager -n cert-manager -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True True True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
 
     # Configure API and Ingress certificates (It user the $CLUSTER_DOMAIN defined previously)
+    # Retrieve the cluster domain
+    export CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}')
     curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-cert-manager-route53.yaml | envsubst | oc apply -f -
+
+
+    echo -ne "\nWaiting for ocp-api certificate to be ready..."
+    while [[ $(oc get certificate ocp-api -n openshift-config -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 5; done; echo -n -e "  [OK]\n"
+
+    echo -ne "\nWaiting for ocp-ingress certificate to be ready..."
+    while [[ $(oc get certificate ocp-ingress -n openshift-ingress -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 5; done; echo -n -e "  [OK]\n"
+
+    sleep 10
 
     # Check cluster operators status
     set +e  # Disable exit on non-zero status to keep the script running even if commands fail. There is no HA when cluster is SNO
@@ -293,8 +302,6 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     done
 
 fi
-
-# Print values to access the cluster
 
 echo -e "\n==============================="
 echo -e "=   Installation finished!!!  ="

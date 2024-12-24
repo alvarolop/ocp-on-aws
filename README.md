@@ -25,7 +25,6 @@ This repository contains a set of scripts that would facilitate the provisioning
 
 ### 0. Command line utilities
 
-* The certificates installation is based on `podman`, so please install `podman` cli prior to execute this script if you want the certificates configured. Check the [documentation](https://podman.io/docs/installation) for the installation mechanism on your system
 * If you want to define your own users, you will need to use the `htpasswd` cli. This command is provided by the `httpd-tools` package on RHEL/Fedora systems. If not, you can just use the example `users.htpasswd` file that has the `redhat` user with password `redhat!1`.
 
 ### 1. AWS account
@@ -71,7 +70,7 @@ AWS and installation parameters that **you are required to modify**:
 
 OCP parameters to configure your cluster. **These are optional, as you can use the defaults**:
 
-- **OPENSHIFT_VERSION**: OCP installer binary version. Check versions available [here](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) Ex: `4.17.7`.
+- **OPENSHIFT_VERSION**: OCP installer binary version. Check versions available [here](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) Ex: `4.17.10`.
 - **MASTER_INSTANCE_TYPE**: AWS EC2 instance type for masters nodes. Minimum is `m7i.2xlarge`.
 - **WORKER_INSTANCE_TYPE**: AWS EC2 instance type for workers nodes. Ex: `m7i.xlarge`
 - **WORKER_REPLICAS**: Number of worker replicas. Ex: `1`
@@ -162,7 +161,4 @@ oc delete secret htpass-secret -n openshift-config
 oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd=auth/users.htpasswd
 oc adm policy add-cluster-role-to-user cluster-admin myusername
 ```
-
-
-
 
