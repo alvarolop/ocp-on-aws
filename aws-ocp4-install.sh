@@ -157,6 +157,9 @@ $CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-l
 
 sleep 5
 
+# Retrieve the cluster domain
+CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}')
+
 #### CREATE USERS ####
 
 echo -e "\n==============================="
@@ -164,7 +167,7 @@ echo -e "=   Configure authentication  ="
 echo -e "===============================\n"
 
 KUBEADMIN_PASSWORD=$(cat "$CLUSTER_WORKDIR/auth/kubeadmin-password")
-OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
+OCP_API=https://api.$CLUSTER_DOMAIN:6443
 
 echo -e "\t- kubeadmin password: $KUBEADMIN_PASSWORD"
 echo -e "\t- Cluster api url: $OCP_API"
@@ -250,18 +253,53 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     echo -e "\n==============================="
     echo -e "=     INSTALL CERTIFICATES    ="
     echo -e "===============================\n"
-    sleep 10
-    source ./aws-ocp4-install-certs.sh $CONFIG_FILE
+
+    # Install OpenShift cert-manager operator
+    oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/refs/heads/main/application-cert-manager-operator.yaml
+
+    echo -n "Waiting for operator pods to be ready..."
+    while [[ $(oc get pods -l name=cert-manager-operator -n cert-manager-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+
+    echo -n "Waiting for cert-manager pods to be ready..."
+    while [[ $(oc get pods -l app.kubernetes.io/instance=cert-manager -n cert-manager -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+
+    # Configure API and Ingress certificates (It user the $CLUSTER_DOMAIN defined previously)
+    curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-cert-manager-route53.yaml | envsubst | oc apply -f -
+
+    # Check cluster operators status
+    set +e  # Disable exit on non-zero status to keep the script running even if commands fail. There is no HA when cluster is SNO
+    echo -e "\nCheck cluster operators..."
+    while true; do
+        oc get clusteroperators
+        STATUS_AUTHENTICATION=$(oc get clusteroperators authentication -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+        STATUS_CONSOLE=$(oc get clusteroperators console -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+        STATUS_KUBE_API_SERVER=$(oc get clusteroperators kube-apiserver -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+        STATUS_KUBE_SCHEDULER=$(oc get clusteroperators kube-scheduler -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+        STATUS_KUBE_CONTROLLER_MANAGER=$(oc get clusteroperators kube-controller-manager -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+
+        # echo "STATUS_AUTHENTICATION $STATUS_AUTHENTICATION"
+        # echo "STATUS_CONSOLE $STATUS_CONSOLE"
+        # echo "STATUS_KUBE_API_SERVER $STATUS_KUBE_API_SERVER"
+        # echo "STATUS_KUBE_SCHEDULER $STATUS_KUBE_SCHEDULER"
+        # echo "STATUS_KUBE_CONTROLLER_MANAGER $STATUS_KUBE_CONTROLLER_MANAGER"
+
+        if [ $STATUS_AUTHENTICATION == "False" ] && [ $STATUS_CONSOLE == "False" ] && [ $STATUS_KUBE_API_SERVER == "False" ] && [ $STATUS_KUBE_SCHEDULER == "False" ] && [ $STATUS_KUBE_CONTROLLER_MANAGER == "False" ]; then
+            echo -e "\n\tOperators updated!!\n"
+            break
+        fi
+
+        echo -e "Cluster operators are still progressing...Sleep 60s...\n"
+        sleep 60
+    done
+
 fi
 
 # Print values to access the cluster
-
-OCP_CONSOLE=https://console-openshift-console.apps.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN
 
 echo -e "\n==============================="
 echo -e "=   Installation finished!!!  ="
 echo -e "===============================\n"
 echo -e "\nYou can access the cluster using the console or the CLI"
-echo -e "\t* Web: $OCP_CONSOLE"
+echo -e "\t* Web: https://console-openshift-console.apps.$CLUSTER_DOMAIN"
 echo -e "\t* CLI: oc login -u ${K_DEFAULT_USER} $OCP_API # You can use any other user"
 echo ""
