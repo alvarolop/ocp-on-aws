@@ -253,7 +253,7 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     echo -e "===============================\n"
 
     # Install OpenShift cert-manager operator
-    oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/refs/heads/main/application-cert-manager-operator.yaml
+    oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/refs/heads/main/application-02-cert-manager-operator.yaml
 
     echo -n "Waiting for operator pods to be ready..."
     while [[ $(oc get pods -l name=cert-manager-operator -n cert-manager-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
@@ -263,7 +263,7 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
     # Configure API and Ingress certificates (It user the $CLUSTER_DOMAIN defined previously)
     # Retrieve the cluster domain
-    curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-cert-manager-route53.yaml | CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') envsubst | oc apply -f -
+    curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-02-cert-manager-route53.yaml | CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') envsubst | oc apply -f -
 
     sleep 10 # Wait for the Certificates to be created in the cluster
 
