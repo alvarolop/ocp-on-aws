@@ -24,7 +24,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLUSTER_WORKDIR="${BASE_DIR}/ocp4-sandbox${RHPDS_GUID}"
 
 OPERATOR_NAMESPACE="openshift-gitops-operator"
-ARGOCD_NAMESPACE="gitops"
+ARGOCD_NAMESPACE="openshift-gitops"
 ARGOCD_CLUSTER_NAME="argocd"
 
 K_DEFAULT_USER="redhat"
