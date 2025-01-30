@@ -182,7 +182,7 @@ oc apply -f auth/clusterrolebinding-cluster-admins.yaml
 oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
 
 echo "Waiting some time to get OAuth configured..."
-sleep 30
+sleep 40
 
 # auth
 echo -en "\nWaiting for authentication configuration to be ready..."
