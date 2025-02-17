@@ -7,6 +7,6 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-10"
 spec:
-  namespaces:
+  targetNamespaces:
     - openshift-lightspeed
   upgradeStrategy: Default
