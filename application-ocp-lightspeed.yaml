@@ -1,0 +1,29 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    app: ocp-lightspeed
+  name: ocp-lightspeed
+  namespace: openshift-gitops
+spec:
+  destination:
+    server: 'https://kubernetes.default.svc'
+  project: default
+  source:
+    path: ocp-lightspeed
+    repoURL: https://github.com/alvarolop/ocp-on-aws.git
+    targetRevision: main
+    helm:
+      # https://maas.apps.prod.rhoai.rh-aiservices-bu.com/admin/applications/8214?service_id=13
+      values: |
+        providers:
+          - name: $OLS_PROVIDER_NAME
+            modelName: $OLS_PROVIDER_MODEL_NAME
+            type: $OLS_PROVIDER_TYPE
+            apiURL: $OLS_PROVIDER_API_URL
+            apiToken: $OLS_PROVIDER_API_TOKEN
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false

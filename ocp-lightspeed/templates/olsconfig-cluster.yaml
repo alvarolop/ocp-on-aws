@@ -1,0 +1,26 @@
+---
+apiVersion: ols.openshift.io/v1alpha1
+kind: OLSConfig
+metadata:
+  name: cluster
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  llm:
+    providers:
+{{- range .Values.providers }}
+      - name: {{ .name }}
+        type: {{ .type }}
+        credentialsSecretRef:
+          name: {{ .modelName | lower | replace " " "-" }}-credentials
+        url: {{ .apiURL }}
+        models:
+          - name: {{ .modelName }}
+{{- end }}
+  ols:
+    defaultModel: {{ (index .Values.providers 0).modelName | quote }}
+    defaultProvider: {{ (index .Values.providers 0).name | quote }}
+{{- if .Values.additionalCAs.enabled }}
+    additionalCAConfigMapRef:
+      name: {{ .Values.additionalCAs.name }}
+{{- end }}

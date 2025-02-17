@@ -1,0 +1,28 @@
+# Default values for ocp-lightspeed.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+providers:
+
+  # The first model of the list will be the default
+  # - name: rh-aiservices-bu-maas
+  #   modelName: granite-3-1-8b-instruct-w4a16
+  #   type: rhoai_vllm
+  #   apiURL: ""
+  #   apiToken: ""
+
+  # - name: red_hat_openshift_ai
+  #   modelName: mistral-7b
+  #   type: rhoai_vllm
+  #   apiURL: https://mistral-7b.mistral-7b.svc.cluster.local:443/v1
+  #   apiToken: ""
+
+  # - name: open_ai
+  #   modelName: gpt-3.5-turbo
+  #   type: openai
+  #   apiURL: https://api.openai.com/v1
+  #   apiToken: ""
+
+# additionalCAs:
+#   enabled: true
+#   name: openshift-service-ca.crt
