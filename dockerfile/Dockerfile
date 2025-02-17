@@ -1,7 +1,7 @@
 FROM registry.access.redhat.com/ubi9:latest
 
 # Install dependencies
-RUN dnf install -y unzip tar gzip openssh openssh-clients rsync \
+RUN dnf install -y unzip tar gzip openssh openssh-clients rsync less \
     && dnf clean all
 
 # Install AWS CLI
