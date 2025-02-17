@@ -2,9 +2,11 @@
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: lightspeed-operator
+  name: openshift-lightspeed
   namespace: openshift-lightspeed
   annotations:
     argocd.argoproj.io/sync-wave: "-10"
 spec:
+  namespaces:
+  - openshift-lightspeed
   upgradeStrategy: Default
