@@ -149,7 +149,11 @@ cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$(echo $RHPDS_
   AWS_DEFAULT_REGION=$(echo $AWS_DEFAULT_REGION) RHOCM_PULL_SECRET=$(echo $RHOCM_PULL_SECRET) \
   WORKER_INSTANCE_TYPE=$(echo $WORKER_INSTANCE_TYPE) WORKER_REPLICAS=$(echo $WORKER_REPLICAS) \
   MASTER_INSTANCE_TYPE=$(echo $MASTER_INSTANCE_TYPE) MASTER_REPLICAS=$(echo ${MASTER_REPLICAS:-3}) \
+  SSH_PUBLIC_KEY=$(echo $SSH_PUBLIC_KEY) \
   envsubst >> $CLUSTER_WORKDIR/install-config.yaml
+
+echo -e "\nThis is the value of the install-config YAML:"
+cat $CLUSTER_WORKDIR/install-config.yaml 
 
 #### OCP INSTALLATION ####
 
