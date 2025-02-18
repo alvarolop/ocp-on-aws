@@ -132,12 +132,15 @@ echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
 
 #### OCP INSTALLER ####
 
+echo "Downloading the `openshift-install` command..."
+
 curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
 tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/openshift-install.tar.gz
 chmod +x $CLUSTER_WORKDIR/openshift-install
 
 #### OC CLI ####
+echo "Downloading the `oc` command..."
 
 curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
 tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
