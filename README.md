@@ -2,19 +2,20 @@
 
 This repository contains a set of scripts that would facilitate the provisioning and configuration of an OCP 4 cluster on AWS.
 
-- [OCP 4 basic installation on AWS](#ocp-4-basic-installation-on-aws)
-  - [Prerequisites](#prerequisites)
-    - [0. Command line utilities](#0-command-line-utilities)
-    - [1. AWS account](#1-aws-account)
-    - [2. Authentication configuration](#2-authentication-configuration)
-    - [3. Add it all to the config file](#3-add-it-all-to-the-config-file)
-  - [Single-node OpenShift](#single-node-openshift)
-  - [Cluster installation](#cluster-installation)
-  - [Cluster Operations](#cluster-operations)
-    - [Cluster deprovisioning](#cluster-deprovisioning)
-    - [Start/Stop EC2 instances](#startstop-ec2-instances)
-  - [OpenShift GitOps deployment](#openshift-gitops-deployment)
-- [Annex: Add users to OCP cluster after install](#annex-add-users-to-ocp-cluster-after-install)
+1. [OCP 4 basic installation on AWS](#ocp-4-basic-installation-on-aws)
+   1. [Prerequisites](#prerequisites)
+      1. [0. Command line utilities](#0-command-line-utilities)
+      2. [1. AWS account](#1-aws-account)
+      3. [2. Authentication configuration](#2-authentication-configuration)
+      4. [3. Add it all to the config file](#3-add-it-all-to-the-config-file)
+   2. [Single-node OpenShift](#single-node-openshift)
+   3. [OpenShift Lightspeed](#openshift-lightspeed)
+   4. [Cluster installation](#cluster-installation)
+   5. [Cluster Operations](#cluster-operations)
+      1. [Cluster deprovisioning](#cluster-deprovisioning)
+      2. [Start/Stop EC2 instances](#startstop-ec2-instances)
+   6. [OpenShift GitOps deployment](#openshift-gitops-deployment)
+2. [Annex: Add users to OCP cluster after install](#annex-add-users-to-ocp-cluster-after-install)
 
 
 > [!CAUTION]
@@ -70,7 +71,7 @@ AWS and installation parameters that **you are required to modify**:
 
 OCP parameters to configure your cluster. **These are optional, as you can use the defaults**:
 
-- **OPENSHIFT_VERSION**: OCP installer binary version. Check versions available [here](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) Ex: `4.17.10`.
+- **OPENSHIFT_VERSION**: OCP installer binary version. Check versions available [here](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) Ex: `4.17.17`.
 - **MASTER_INSTANCE_TYPE**: AWS EC2 instance type for masters nodes. Minimum is `m7i.2xlarge`.
 - **WORKER_INSTANCE_TYPE**: AWS EC2 instance type for workers nodes. Ex: `m7i.xlarge`
 - **WORKER_REPLICAS**: Number of worker replicas. Ex: `1`
@@ -91,6 +92,27 @@ That's all! Execute it now and you will see the magic!! 🪄
 
 
 Here, you can check the [official documentation](https://docs.openshift.com/container-platform/4.17/installing/installing_sno/install-sno-installing-sno.html#install-sno-monitoring-the-installation-manually_install-sno-installing-sno-with-the-assisted-installer) if you want to make further customizations.
+
+
+## OpenShift Lightspeed
+
+Well.. but I cannot live without AI!! Fine, then you should care about this section. The installer comes with an option to also configure [OpenShift Lightspeed](https://developers.redhat.com/products/openshift/lightspeed). OpenShift Lightspeed is a generative AI-based virtual assistant integrated into the OpenShift web console. If you want to add it to the automated installation, add the following variables to your configuration file:
+
+```bash
+INSTALL_OPENSHIFT_LIGHTSPEED=true
+OLS_PROVIDER_NAME=<providerName>
+OLS_PROVIDER_MODEL_NAME=<modelName>
+OLS_PROVIDER_TYPE=<providerType>
+OLS_PROVIDER_API_URL=<apiURL>
+OLS_PROVIDER_API_TOKEN=<apiToken>
+```
+
+> [!TIP]
+> If you are a Red Hatter, you can use the **Models-as-a-service for Parasol on OpenShift AI**. Ping me for more information!
+
+
+For more information about how to configure this feature, check the [official documentation](https://docs.openshift.com/lightspeed/1.0tp1/about/ols-about-openshift-lightspeed.html).
+
 
 
 ## Cluster installation
