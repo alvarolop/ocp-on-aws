@@ -28,5 +28,6 @@ networking:
 platform:
   aws:
     region: $AWS_DEFAULT_REGION
+    $EXISTING_SUBNETS
 pullSecret: '$RHOCM_PULL_SECRET'
 sshKey: '$SSH_PUBLIC_KEY'

@@ -22,7 +22,17 @@ source $CONFIG_FILE
 # Extra configuration
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RHPDS_GUID=${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN//[^0-9]/}
-CLUSTER_WORKDIR="${BASE_DIR}/ocp4-sandbox${RHPDS_GUID}"
+# Remove the initial period if it exists
+RHPDS_TOP_LEVEL_ROUTE53_DOMAIN="${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN#.}"
+CLUSTER_WORKDIR="${BASE_DIR}/workdir-sandbox$RHPDS_GUID-$CLUSTER_NAME"
+
+# Check if the folder exists
+if [ -d "$CLUSTER_WORKDIR" ]; then
+    echo "Error: The folder '$CLUSTER_WORKDIR' already exists. Please delete it before proceeding."
+    exit 1 # Exit with a non-zero status to indicate failure
+else
+    echo "The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
+fi
 
 OPERATOR_NAMESPACE="openshift-gitops-operator"
 ARGOCD_NAMESPACE="openshift-gitops"
@@ -102,6 +112,32 @@ if ! command -v podman &>/dev/null && [[ ${INSTALL_LETS_ENCRYPT_CERTIFICATES} =~
     echo "Exiting. Please, install podman."
 fi
 
+# Check that the aws cli is installed if you want to reuse the VPC.
+if ! command -v aws &>/dev/null && [[ ${REUSE_AWS_VPC} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+    echo "aws cli is not installed, and REUSE_AWS_VPC is set to True/Yes/1."
+    echo "Exiting. Please, install aws cli or just deploy one cluster."
+fi
+
+# Add support for reusing a previously created VPC
+if [[ "$REUSE_AWS_VPC" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+    echo "Existing VPC is $EXISTING_VPC..."
+
+    # Fetch the Subnet IDs associated with the specified VPC
+    SUBNET_IDS=$(aws ec2 describe-subnets \
+        --filters Name=vpc-id,Values="$EXISTING_VPC" \
+        --query 'Subnets[*].SubnetId' \
+        --output text)
+
+    # Convert Subnet IDs into a single-line YAML array
+    EXISTING_SUBNETS="subnets: [$(echo $SUBNET_IDS | sed "s/ /', '/g" | sed "s/^/'/;s/$/'/")]"
+
+    echo "Existing subnets are:"
+    echo "$EXISTING_SUBNETS"
+else
+    EXISTING_SUBNETS=""
+    echo "No existing VPC, so no subnets..."
+fi
+
 #### Print Variables ####
 echo
 echo ------------------------------------
@@ -111,14 +147,17 @@ echo OPENSHIFT_VERSION=$OPENSHIFT_VERSION
 echo RHPDS_GUID=$RHPDS_GUID
 echo RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN
 echo CLUSTER_NAME=$CLUSTER_NAME
+echo REUSE_AWS_VPC=$REUSE_AWS_VPC
+echo EXISTING_VPC=$EXISTING_VPC
+echo EXISTING_SUBNETS=$EXISTING_SUBNETS
 echo AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 echo AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 echo AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 echo INSTALL_LETS_ENCRYPT_CERTIFICATES=$INSTALL_LETS_ENCRYPT_CERTIFICATES
 echo INSTALL_OPENSHIFT_GITOPS=$INSTALL_OPENSHIFT_GITOPS
+echo INSTALL_OPENSHIFT_LIGHTSPEED=$INSTALL_OPENSHIFT_LIGHTSPEED
 echo ------------------------------------
 
-exit 0
 echo -e "\n============================="
 echo -e "=   OPENSHIFT INSTALLATION  ="
 echo -e "=============================\n"
@@ -149,12 +188,12 @@ rm -f $CLUSTER_WORKDIR/oc.tar.gz
 chmod +x $CLUSTER_WORKDIR/oc
 
 #### OCP CONFIG ####
-cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$(echo $RHPDS_TOP_LEVEL_ROUTE53_DOMAIN) CLUSTER_NAME=$(echo $CLUSTER_NAME) \
-  AWS_DEFAULT_REGION=$(echo $AWS_DEFAULT_REGION) RHOCM_PULL_SECRET=$(echo $RHOCM_PULL_SECRET) \
-  WORKER_INSTANCE_TYPE=$(echo $WORKER_INSTANCE_TYPE) WORKER_REPLICAS=$(echo $WORKER_REPLICAS) \
-  MASTER_INSTANCE_TYPE=$(echo $MASTER_INSTANCE_TYPE) MASTER_REPLICAS=$(echo ${MASTER_REPLICAS:-3}) \
-  SSH_PUBLIC_KEY=$(echo $SSH_PUBLIC_KEY) \
-  envsubst >> $CLUSTER_WORKDIR/install-config.yaml
+cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN CLUSTER_NAME=$CLUSTER_NAME \
+  AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION RHOCM_PULL_SECRET=$RHOCM_PULL_SECRET \
+  WORKER_INSTANCE_TYPE=$WORKER_INSTANCE_TYPE WORKER_REPLICAS=$WORKER_REPLICAS \
+  MASTER_INSTANCE_TYPE=$MASTER_INSTANCE_TYPE MASTER_REPLICAS=${MASTER_REPLICAS:-3} \
+  EXISTING_SUBNETS=$EXISTING_SUBNETS SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY \
+  envsubst > $CLUSTER_WORKDIR/install-config.yaml
 
 echo -e "\nThis is the value of the install-config YAML:"
 cat $CLUSTER_WORKDIR/install-config.yaml 
@@ -164,7 +203,6 @@ cat $CLUSTER_WORKDIR/install-config.yaml
 $CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-level debug
 
 sleep 5
-
 
 #### CREATE USERS ####
 

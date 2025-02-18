@@ -20,6 +20,7 @@ export AWS_SECRET_ACCESS_KEY=""
 # AWS Region. Change according to your location
 # https://docs.openshift.com/container-platform/4.15/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
 export AWS_DEFAULT_REGION="eu-west-1"
+
 # Public key to add to the OCP nodes for ssh.
 # This value is optional, so just add a value if you want to add a key
 # SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub | tr -d '\n')"

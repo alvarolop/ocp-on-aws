@@ -1,5 +1,6 @@
 aws-ocp4-config-*
 ocp4-sandbox*
+workdir-*
 !auth/*.example
 auth/group-cluster-admins.yaml
 auth/*.htpasswd
