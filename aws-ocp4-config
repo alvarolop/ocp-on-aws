@@ -3,7 +3,7 @@
 
 # OpenShift version (must be 4.x.z format)
 # https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
-OPENSHIFT_VERSION="4.17.10"
+OPENSHIFT_VERSION="4.17.17"
 
 # Enter here your RHPDS Lab GUID
 RHPDS_GUID="XXXX" # It has two be a number 1 < X < 9999!
@@ -23,6 +23,10 @@ export AWS_SECRET_ACCESS_KEY=""
 # AWS Region. Change according to your location
 # https://docs.openshift.com/container-platform/4.15/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
 export AWS_DEFAULT_REGION="eu-west-1"
+# Public key to add to the OCP nodes for ssh.
+# This value is optional, so just add a value if you want to add a key
+# SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub | tr -d '\n')"
+SSH_PUBLIC_KEY=""
 
 # Enter Pull Secret given from RedHat OpenShift Cluster Manager site (https://console.redhat.com/openshift/downloads#tool-pull-secret) for an AWS IPI installation
 # WARNING: FILL THE PULL SECRET BETWEEN SINGLE QUOTES HERE!
@@ -48,10 +52,16 @@ MASTER_INSTANCE_TYPE=m7i.xlarge
 # MASTER_INSTANCE_TYPE=m7i.4xlarge
 # MASTER_REPLICAS=1
 
-
 # OCP SSL Certificates and GitOps configuration
 INSTALL_LETS_ENCRYPT_CERTIFICATES=true
 INSTALL_OPENSHIFT_GITOPS=true
 
+# OCP Lightspeed
+INSTALL_OPENSHIFT_LIGHTSPEED=false
+OLS_PROVIDER_NAME=""
+OLS_PROVIDER_MODEL_NAME=""
+OLS_PROVIDER_TYPE=""
+OLS_PROVIDER_API_URL=""
+OLS_PROVIDER_API_TOKEN=""
 
 # ./aws-ocp4-install.sh ./aws-ocp4-config-labs
