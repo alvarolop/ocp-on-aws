@@ -21,6 +21,7 @@ source $CONFIG_FILE
 
 # Extra configuration
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RHPDS_GUID=${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN//[^0-9]/}
 CLUSTER_WORKDIR="${BASE_DIR}/ocp4-sandbox${RHPDS_GUID}"
 
 OPERATOR_NAMESPACE="openshift-gitops-operator"
@@ -117,7 +118,7 @@ echo INSTALL_LETS_ENCRYPT_CERTIFICATES=$INSTALL_LETS_ENCRYPT_CERTIFICATES
 echo INSTALL_OPENSHIFT_GITOPS=$INSTALL_OPENSHIFT_GITOPS
 echo ------------------------------------
 
-
+exit 0
 echo -e "\n============================="
 echo -e "=   OPENSHIFT INSTALLATION  ="
 echo -e "=============================\n"

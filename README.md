@@ -62,7 +62,7 @@ Ex: `cp aws-ocp4-config aws-ocp4-config-labs`
 
 AWS and installation parameters that **you are required to modify**:
 
-* **RHPDS_GUID**: RHPDS Lab GUID. You can find it on the email.
+* **RHPDS_TOP_LEVEL_ROUTE53_DOMAIN**: Top level route53 domain. You can find it on the email.
 * **AWS_ACCESS_KEY_ID**: You can find it on the email.
 * **AWS_SECRET_ACCESS_KEY**: You can find it on the email.
 * **AWS_DEFAULT_REGION**: This is the region where your cluster will be deployed. I recommend `eu-west-1` to simplify automation of further components.
