@@ -110,12 +110,14 @@ fi
 if ! command -v podman &>/dev/null && [[ ${INSTALL_LETS_ENCRYPT_CERTIFICATES} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     echo "Podman is not installed, and INSTALL_LETS_ENCRYPT_CERTIFICATES is set to True/Yes/1."
     echo "Exiting. Please, install podman."
+    exit 1
 fi
 
 # Check that the aws cli is installed if you want to reuse the VPC.
 if ! command -v aws &>/dev/null && [[ ${REUSE_AWS_VPC} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     echo "aws cli is not installed, and REUSE_AWS_VPC is set to True/Yes/1."
     echo "Exiting. Please, install aws cli or just deploy one cluster."
+    exit 1
 fi
 
 # Add support for reusing a previously created VPC
