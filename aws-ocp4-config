@@ -3,7 +3,7 @@
 
 # OpenShift version (must be 4.x.z format)
 # https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
-OPENSHIFT_VERSION="4.17.17"
+OPENSHIFT_VERSION="4.18.1"
 
 # Enter here your RHPDS Lab Top Level Route53 Domain excluding the dot prefix at the beginning. Example: .sandbox1234.opentlc.com
 RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=""

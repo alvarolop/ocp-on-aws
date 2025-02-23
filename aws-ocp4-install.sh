@@ -7,7 +7,9 @@
 set -e
 # set -x
 
-CONFIG_FILE=$1
+CONFIG_FILE="${1:-aws-ocp4-config-labs}"
+
+echo "Using config file: $CONFIG_FILE"
 
 ## Check if mac or linux
 case "$(uname -s)" in
