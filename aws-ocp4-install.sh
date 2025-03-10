@@ -208,6 +208,9 @@ $CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-l
 
 sleep 5
 
+echo -e "\nDelete all the pods in Error state after installation (openshift-kube-apiserver, openshift-kube-scheduler, etc)"
+oc get pods --all-namespaces | grep -E "Error|Failed" | awk '{print "oc delete pod " $2 " -n " $1}' | bash
+
 #### CREATE USERS ####
 
 echo -e "\n==============================="
