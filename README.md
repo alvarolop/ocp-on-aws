@@ -39,7 +39,7 @@ In order to install OpenShift on AWS using IPI (Installer-Provisioned Infrastruc
 * To configure the top-level domain in AWS Route 53, create a hosted zone for your domain, update the registrar with the provided NS records, and then add the necessary DNS records like A or CNAME to point to your infrastructure. This setup links your domain to Route 53, allowing you to manage DNS for your website or services.
 
 > [!IMPORTANT]
-> If you are a Red Hatter, you can order a lab environment on the [Red Hat Demo Platform](https://demo.redhat.com). Request environment `Red Hat Open Environments` > `AWS Blank Open Environment`
+> If you are a Red Hatter, you can order a lab environment on the [Red Hat Demo Platform](https://catalog.demo.redhat.com/catalog?item=babylon-catalog-prod/sandboxes-gpte.sandbox-open.prod&utm_source=webapp&utm_medium=share-link). Request environment `Red Hat Open Environments` > `AWS Blank Open Environment`
 
 
 ### 2. Authentication configuration
@@ -72,7 +72,7 @@ AWS and installation parameters that **you are required to modify**:
 
 OCP parameters to configure your cluster. **These are optional, as you can use the defaults**:
 
-- **OPENSHIFT_VERSION**: OCP installer binary version. Check versions available [here](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) Ex: `4.17.17`.
+- **OPENSHIFT_VERSION**: OCP installer binary version. Check versions available [here](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) Ex: `4.18.6`.
 - **MASTER_INSTANCE_TYPE**: AWS EC2 instance type for masters nodes. Minimum is `m7i.2xlarge`.
 - **WORKER_INSTANCE_TYPE**: AWS EC2 instance type for workers nodes. Ex: `m7i.xlarge`
 - **WORKER_REPLICAS**: Number of worker replicas. Ex: `1`
@@ -91,8 +91,15 @@ Ok, a full cluster (Multi-node cluster) is too much for your needs and you would
 
 That's all! Execute it now and you will see the magic!! 🪄
 
+Here, you can check the [official documentation](https://docs.openshift.com/container-platform/4.18/installing/installing_sno/install-sno-installing-sno.html#install-sno-monitoring-the-installation-manually_install-sno-installing-sno-with-the-assisted-installer) if you want to make further customizations.
 
-Here, you can check the [official documentation](https://docs.openshift.com/container-platform/4.17/installing/installing_sno/install-sno-installing-sno.html#install-sno-monitoring-the-installation-manually_install-sno-installing-sno-with-the-assisted-installer) if you want to make further customizations.
+
+> [!CAUTION]
+> `AWS Blank Open Environment` accounts have a default Service Quota of **Classic Load Balancers per Region = 20**. This means that you can only deploy this exercise for 15 users by default. Rise the Quota to 40 to ensure that you can at least deploy 20 clusters. For that, just follow these steps:
+> 1. Sign in to the AWS Management Console.
+> 2. Open the Service Quotas console.
+> 3. In the navigation pane, choose AWS services and select Elastic Load Balancing.
+> 4. Find the quota for `Application-` or `Classic Load Balancers per region` (e.g., 50 for Application Load Balancers per region) and request an increase.
 
 
 ## Multiple OCP clusters
