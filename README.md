@@ -17,6 +17,7 @@ This repository contains a set of scripts that would facilitate the provisioning
    6. [OpenShift GitOps deployment](#openshift-gitops-deployment)
    7. [OpenShift Lightspeed](#openshift-lightspeed)
 2. [Annex: Add users to OCP cluster after install](#annex-add-users-to-ocp-cluster-after-install)
+3. [Annex: Recover from expired certificates](#annex-recover-from-expired-certificates)
 
 
 > [!CAUTION]
@@ -230,3 +231,15 @@ oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd=
 oc adm policy add-cluster-role-to-user cluster-admin myusername
 ```
 
+
+# Annex: Recover from expired certificates
+
+
+```bash
+for id in $(oc get csr | grep Pending | awk '{print $1}'); do
+   oc adm certificate approve $id;
+done
+for id in $(oc --kubeconfig=kubeconfig --insecure-skip-tls-verify get csr | grep Pending | awk '{print $1}'); do
+ oc --kubeconfig=kubeconfig --insecure-skip-tls-verify  adm certificate approve $id; 
+done
+```
