@@ -1,11 +1,11 @@
 # Variable files for ArgoCD
 global:
-  namespace: openshift-gitops
-  clusterName: argocd-cluster
+  namespace: test-gitops
+  clusterName: argocd
   clusterDomain: ocp.sandbox342.opentlc.com
 
 namespace:
-  enabled: false
+  enabled: true
 
 argoRollout:
   enabled: true
