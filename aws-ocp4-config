@@ -3,7 +3,7 @@
 
 # OpenShift version (must be 4.x.z format)
 # https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
-OPENSHIFT_VERSION="4.18.1"
+OPENSHIFT_VERSION="4.18.7"
 
 # Enter here your RHPDS Lab Top Level Route53 Domain excluding the dot prefix at the beginning. Example: .sandbox1234.opentlc.com
 RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=""
@@ -41,7 +41,8 @@ OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp
 
 # Option 1: Multi-node OCP
 WORKER_INSTANCE_TYPE=m7i.2xlarge # Normal worker nodes
-# WORKER_INSTANCE_TYPE=m6id.4xlarge # ODF nodes with LSO
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/installing_on_aws/installation-config-parameters-aws#installation-configuration-parameters-optional-aws_installation-config-parameters-aws
+# COMPUTE_VOLUME_SIZE=200 # Size in GB. Default is 120GB
 WORKER_REPLICAS=1
 MASTER_INSTANCE_TYPE=m7i.xlarge
 

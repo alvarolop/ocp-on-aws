@@ -5,7 +5,8 @@ compute:
   hyperthreading: Enabled
   platform:
     aws:
-      type: $WORKER_INSTANCE_TYPE 
+      type: $WORKER_INSTANCE_TYPE
+      $COMPUTE_ROOT_VOLUME
   replicas: $WORKER_REPLICAS
 controlPlane:
   name: master

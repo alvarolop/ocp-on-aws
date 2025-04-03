@@ -36,7 +36,6 @@ else
     echo "The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
 fi
 
-OPERATOR_NAMESPACE="openshift-gitops-operator"
 ARGOCD_NAMESPACE="openshift-gitops"
 ARGOCD_CLUSTER_NAME="argocd"
 
@@ -142,6 +141,11 @@ else
     echo "No existing VPC, so no subnets..."
 fi
 
+# Add support to change the default volume size of Worker nodes
+if [[ -n "${COMPUTE_VOLUME_SIZE}" ]]; then
+    COMPUTE_ROOT_VOLUME="rootVolume: { size: ${COMPUTE_VOLUME_SIZE}, type: gp3 }"
+fi
+
 #### Print Variables ####
 echo
 echo ------------------------------------
@@ -176,7 +180,7 @@ echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
 
 #### OCP INSTALLER ####
 
-echo "Downloading the `openshift-install` command..."
+echo "Downloading the 'openshift-install' command..."
 
 curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
 tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
@@ -197,6 +201,7 @@ cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$RHPDS_TOP_LEV
   WORKER_INSTANCE_TYPE=$WORKER_INSTANCE_TYPE WORKER_REPLICAS=$WORKER_REPLICAS \
   MASTER_INSTANCE_TYPE=$MASTER_INSTANCE_TYPE MASTER_REPLICAS=${MASTER_REPLICAS:-3} \
   EXISTING_SUBNETS=$EXISTING_SUBNETS SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY \
+  COMPUTE_ROOT_VOLUME=$COMPUTE_ROOT_VOLUME \
   envsubst > $CLUSTER_WORKDIR/install-config.yaml
 
 echo -e "\nThis is the value of the install-config YAML:"
@@ -273,11 +278,10 @@ if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     # Install OpenShift GitOps operator
     echo -e "\n[1/3]Install OpenShift GitOps operator"
 
-    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/01-operator.yaml \
-        -p OPERATOR_NAMESPACE=$OPERATOR_NAMESPACE | oc apply -f -
+    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/01-operator.yaml | oc apply -f -
 
     echo -n "Waiting for pods ready..."
-    while [[ $(oc get pods -l control-plane=gitops-operator -n $OPERATOR_NAMESPACE -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+    while [[ $(oc get pods -l control-plane=gitops-operator -n openshift-gitops-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
 
     # Deploy the ArgoCD instance
     echo -e "\n[2/3]Deploy the ArgoCD instance"
