@@ -301,7 +301,7 @@ if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
         --set global.clusterName=argocd \
         --set global.clusterDomain=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}')
 
-    # Wait for DeploymentConfig
+    # Wait for Deployment
     echo -n "Waiting for pods ready..."
     while [[ $(oc get pods -l app.kubernetes.io/name=argocd-server -n openshift-gitops -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
 fi
