@@ -36,16 +36,16 @@ else
     echo "The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
 fi
 
-ARGOCD_NAMESPACE="openshift-gitops"
-ARGOCD_CLUSTER_NAME="argocd"
-
 K_DEFAULT_USER="redhat"
 K_DEFAULT_PASSWD="${K_DEFAULT_PASSWD:-redhat!1}"
 
 # functs
-OC_PATH="$CLUSTER_WORKDIR/oc"
 function oc() {
-   $OC_PATH "$@"
+   $CLUSTER_WORKDIR/oc "$@"
+}
+
+function helm() {
+   $CLUSTER_WORKDIR/helm "$@"
 }
 
 function checkVariable {
@@ -182,18 +182,28 @@ echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
 
 echo "Downloading the 'openshift-install' command..."
 
-curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
+curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
 tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/openshift-install.tar.gz
 chmod +x $CLUSTER_WORKDIR/openshift-install
 
 #### OC CLI ####
-echo "Downloading the `oc` command..."
+echo "Downloading the 'oc' command..."
 
-curl -k "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
+curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
 tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/oc.tar.gz
 chmod +x $CLUSTER_WORKDIR/oc
+
+#### HELM CLI ####
+HELM_VERSION=latest
+OS_ARCH=amd64
+echo "Downloading the 'helm' command..."
+curl -L "${OCP_DOWNLOAD_BASE_URL%/ocp}/helm/${HELM_VERSION}/helm-${os}-${OS_ARCH}.tar.gz" -o $CLUSTER_WORKDIR/helm.tar.gz
+tar zxvf $CLUSTER_WORKDIR/helm.tar.gz -C $CLUSTER_WORKDIR
+rm -f $CLUSTER_WORKDIR/helm.tar.gz
+mv $CLUSTER_WORKDIR/helm-$os-$OS_ARCH $CLUSTER_WORKDIR/helm
+chmod +x $CLUSTER_WORKDIR/helm
 
 #### OCP CONFIG ####
 cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN CLUSTER_NAME=$CLUSTER_NAME \
@@ -276,31 +286,25 @@ if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     echo -e "===============================\n"
 
     # Install OpenShift GitOps operator
-    echo -e "\n[1/3]Install OpenShift GitOps operator"
+    echo -e "\n[1/2]Install OpenShift GitOps operator"
 
-    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/01-operator.yaml | oc apply -f -
+    oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/argocd-operator-install.yaml
 
     echo -n "Waiting for pods ready..."
     while [[ $(oc get pods -l control-plane=gitops-operator -n openshift-gitops-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
 
     # Deploy the ArgoCD instance
-    echo -e "\n[2/3]Deploy the ArgoCD instance"
-    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/02-argocd.yaml \
-        -p ARGOCD_NAMESPACE=$ARGOCD_NAMESPACE \
-        -p ARGOCD_CLUSTER_NAME="$ARGOCD_CLUSTER_NAME" | oc apply -f -
+    echo -e "\n[2/2]Deploy the ArgoCD instance"
+    helm repo add alvarolop-gitops https://alvarolop.github.io/ocp-gitops-playground/
+    helm upgrade --install argocd alvarolop-gitops/argocd-config --namespace openshift-gitops \
+        --set global.namespace=openshift-gitops \
+        --set global.clusterName=argocd \
+        --set global.clusterDomain=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') \
+        --set argoRoll
 
     # Wait for DeploymentConfig
     echo -n "Waiting for pods ready..."
-    while [[ $(oc get pods -l app.kubernetes.io/name=${ARGOCD_CLUSTER_NAME}-server -n $ARGOCD_NAMESPACE -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
-
-    ARGOCD_ROUTE=$(oc get routes $ARGOCD_CLUSTER_NAME-server -n $ARGOCD_NAMESPACE --template="https://{{.spec.host}}")
-
-    # Create the ArgoCD ConsoleLink
-    echo -e "\n[3/3]Create the ArgoCD ConsoleLink"
-    oc process -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/openshift/03-consolelink.yaml \
-        -p ARGOCD_ROUTE=$ARGOCD_ROUTE \
-        -p ARGOCD_NAMESPACE=$ARGOCD_NAMESPACE \
-        -p ARGOCD_CLUSTER_NAME="$ARGOCD_CLUSTER_NAME" | oc apply -f -
+    while [[ $(oc get pods -l app.kubernetes.io/name=argocd-server -n openshift-gitops -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
 fi
 
 if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
@@ -318,8 +322,7 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     echo -n "Waiting for cert-manager pods to be ready..."
     while [[ $(oc get pods -l app.kubernetes.io/instance=cert-manager -n cert-manager -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True True True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
 
-    # Configure API and Ingress certificates (It user the $CLUSTER_DOMAIN defined previously)
-    # Retrieve the cluster domain
+    # Configure API and Ingress certificates
     curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-02-cert-manager-route53.yaml | CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') envsubst | oc apply -f -
 
     sleep 10 # Wait for the Certificates to be created in the cluster
@@ -342,12 +345,6 @@ if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
         STATUS_KUBE_API_SERVER=$(oc get clusteroperators kube-apiserver -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
         STATUS_KUBE_SCHEDULER=$(oc get clusteroperators kube-scheduler -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
         STATUS_KUBE_CONTROLLER_MANAGER=$(oc get clusteroperators kube-controller-manager -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
-
-        # echo "STATUS_AUTHENTICATION $STATUS_AUTHENTICATION"
-        # echo "STATUS_CONSOLE $STATUS_CONSOLE"
-        # echo "STATUS_KUBE_API_SERVER $STATUS_KUBE_API_SERVER"
-        # echo "STATUS_KUBE_SCHEDULER $STATUS_KUBE_SCHEDULER"
-        # echo "STATUS_KUBE_CONTROLLER_MANAGER $STATUS_KUBE_CONTROLLER_MANAGER"
 
         if [ $STATUS_AUTHENTICATION == "False" ] && [ $STATUS_CONSOLE == "False" ] && [ $STATUS_KUBE_API_SERVER == "False" ] && [ $STATUS_KUBE_SCHEDULER == "False" ] && [ $STATUS_KUBE_CONTROLLER_MANAGER == "False" ]; then
             echo -e "\n\tOperators updated!!\n"

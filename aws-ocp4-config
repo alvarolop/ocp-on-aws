@@ -30,7 +30,8 @@ SSH_PUBLIC_KEY=""
 # WARNING: FILL THE PULL SECRET BETWEEN SINGLE QUOTES HERE!
 RHOCM_PULL_SECRET=''
 
-# This is the base URL to download both CLI and installer. You are not supposed to modify it unless you need to experiment nightly releases.
+# This is the base URL to download both CLI and installer. 
+# You are not supposed to modify it unless you need to experiment nightly releases.
 OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
 
 # Machines configuration
