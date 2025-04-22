@@ -28,14 +28,6 @@ RHPDS_GUID=${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN//[^0-9]/}
 RHPDS_TOP_LEVEL_ROUTE53_DOMAIN="${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN#.}"
 CLUSTER_WORKDIR="${BASE_DIR}/workdir-sandbox$RHPDS_GUID-$CLUSTER_NAME"
 
-# Check if the folder exists
-if [ -d "$CLUSTER_WORKDIR" ]; then
-    echo "Error: The folder '$CLUSTER_WORKDIR' already exists. Please delete it before proceeding."
-    exit 1 # Exit with a non-zero status to indicate failure
-else
-    echo "The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
-fi
-
 K_DEFAULT_USER="redhat"
 K_DEFAULT_PASSWD="${K_DEFAULT_PASSWD:-redhat!1}"
 
@@ -171,6 +163,14 @@ echo -e "=   OPENSHIFT INSTALLATION  ="
 echo -e "=============================\n"
 
 
+# Check if the folder exists
+if [ -d "$CLUSTER_WORKDIR" ]; then
+    echo "Error: The folder '$CLUSTER_WORKDIR' already exists. Please delete it before proceeding."
+    exit 1 # Exit with a non-zero status to indicate failure
+else
+    echo "The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
+fi
+
 # #### AWS ####
 
 echo "Installation directoy is $CLUSTER_WORKDIR"
@@ -296,6 +296,7 @@ if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     # Deploy the ArgoCD instance
     echo -e "\n[2/2]Deploy the ArgoCD instance"
     helm repo add alvarolop-gitops https://alvarolop.github.io/ocp-gitops-playground/
+    helm repo update alvarolop-gitops
     helm upgrade --install argocd alvarolop-gitops/argocd-config --namespace openshift-gitops \
         --set global.namespace=openshift-gitops \
         --set global.clusterName=argocd \
