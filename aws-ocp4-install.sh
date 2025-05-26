@@ -300,7 +300,8 @@ if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     helm upgrade --install argocd alvarolop-gitops/argocd-config --namespace openshift-gitops \
         --set global.namespace=openshift-gitops \
         --set global.clusterName=argocd \
-        --set global.clusterDomain=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}')
+        --set argoRollout.enabled=true \
+        --set global.clusterDomain=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') 
 
     # Wait for Deployment
     echo -n "Waiting for pods ready..."
