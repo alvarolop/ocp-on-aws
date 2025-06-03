@@ -208,12 +208,12 @@ OLS_PROVIDER_API_TOKEN=<apiToken>
 If you want to install it manually on your cluster, you can do so directly using the `helm` command:
 
 ```bash
-helm template ocp-lightspeed 
-  --set providers[0].name="$OLS_PROVIDER_NAME" \
-  --set providers[0].modelName="$OLS_PROVIDER_MODEL_NAME" \
-  --set providers[0].type="$OLS_PROVIDER_TYPE" \
-  --set providers[0].apiURL="$OLS_PROVIDER_API_URL" \
-  --set providers[0].apiToken="$OLS_PROVIDER_API_TOKEN" | oc apply -f -
+helm template ocp-lightspeed \
+--set providers[0].name="$OLS_PROVIDER_NAME" \
+--set providers[0].modelName="$OLS_PROVIDER_MODEL_NAME" \
+--set providers[0].type="$OLS_PROVIDER_TYPE" \
+--set providers[0].apiURL="$OLS_PROVIDER_API_URL" \
+--set providers[0].apiToken="$OLS_PROVIDER_API_TOKEN" | oc apply -f -
 ```
 
 
