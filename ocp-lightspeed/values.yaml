@@ -1,6 +1,7 @@
 # Default values for ocp-lightspeed.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+introspectionEnabled: true
 
 providers:
 

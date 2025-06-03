@@ -21,6 +21,7 @@ spec:
     defaultModel: {{ (index .Values.providers 0).modelName | quote }}
     defaultProvider: {{ (index .Values.providers 0).name | quote }}
 {{- if and (hasKey .Values "additionalCAs") .Values.additionalCAs.enabled .Values.additionalCAs.name }}
+    introspectionEnabled: {{ .Values.introspectionEnabled }}
     additionalCAConfigMapRef:
       name: {{ .Values.additionalCAs.name }}
 {{- end }}
