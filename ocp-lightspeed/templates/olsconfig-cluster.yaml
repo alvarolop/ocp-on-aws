@@ -8,7 +8,7 @@ metadata:
 spec:
   llm:
     providers:
-{{- range .Values.providers }}
+    {{- range .Values.providers }}
       - name: {{ .name }}
         type: {{ .type }}
         credentialsSecretRef:
@@ -16,12 +16,30 @@ spec:
         url: {{ .apiURL }}
         models:
           - name: {{ .modelName }}
-{{- end }}
+    {{- end }}
   ols:
+    logLevel: INFO
     defaultModel: {{ (index .Values.providers 0).modelName | quote }}
     defaultProvider: {{ (index .Values.providers 0).name | quote }}
-{{- if and (hasKey .Values "additionalCAs") .Values.additionalCAs.enabled .Values.additionalCAs.name }}
-    introspectionEnabled: {{ .Values.introspectionEnabled }}
+    # https://docs.redhat.com/en/documentation/red_hat_openshift_lightspeed/1.0tp1/html-single/configure/index#ols-about-lightspeed-and-role-based-access-control_ols-configuring-openshift-lightspeed
+    introspectionEnabled: {{ .Values.introspection.enabled }}
+    {{- if and (hasKey .Values "additionalCAs") .Values.additionalCAs.enabled .Values.additionalCAs.name }}
     additionalCAConfigMapRef:
       name: {{ .Values.additionalCAs.name }}
-{{- end }}
+    {{- end }}
+    {{- if .Values.queryFilters.enabled }}
+    # https://docs.redhat.com/en/documentation/red_hat_openshift_lightspeed/1.0tp1/html-single/configure/index#ols-about-lightspeed-and-role-based-access-control_ols-configuring-openshift-lightspeed
+    queryFilters:
+      - name: ip-address
+        pattern: '((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}'
+        replaceWith: <IP_ADDRESS>
+    {{- end }}
+    {{- if .Values.rag.enabled }}
+    # https://rhpds.github.io/lb1344-showroom-openshift-lightspeed-and-rag-pipeline/modules/module-02.html
+    rag:
+      - image: {{ .Values.rag.image | quote}}
+        indexID: vector_db_index
+        indexPath: /rag/vector_db
+    {{- end }}
+  olsDataCollector:
+    logLevel: INFO # DEBUG, INFO, WARNING, ERROR

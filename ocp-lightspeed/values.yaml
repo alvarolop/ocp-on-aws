@@ -1,7 +1,6 @@
 # Default values for ocp-lightspeed.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-introspectionEnabled: true
 
 providers:
 
@@ -24,6 +23,16 @@ providers:
   #   apiURL: https://api.openai.com/v1
   #   apiToken: ""
 
+introspection:
+  enabled: true
+
 # additionalCAs:
 #   enabled: true
 #   name: openshift-service-ca.crt
+
+queryFilters:
+  enabled: false
+
+rag:
+  enabled: false
+  image: "quay.io/dialvare/acme-byok:latest"
