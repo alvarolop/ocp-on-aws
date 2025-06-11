@@ -11,12 +11,28 @@ CONFIG_FILE="${1:-aws-ocp4-config-labs}"
 
 echo "Using config file: $CONFIG_FILE"
 
-## Check if mac or linux
+## Set architecture variables
 case "$(uname -s)" in
     Linux*)  os=linux;;
-    Darwin*) os=mac;;
+    Darwin*) os=darwin;;
     *)       os=unknown;;
 esac
+
+case "$(uname -m)" in
+    x86_64*) OS_ARCH=amd64;;
+    arm64*)  OS_ARCH=arm64;;
+    *)       OS_ARCH=unknown;;
+esac
+
+# Show detected values
+echo "Detected operating system: $os"
+echo "Detected architecture: $OS_ARCH"
+
+# Validate both
+if [ "$os" = "unknown" ] || [ "$OS_ARCH" = "unknown" ]; then
+    echo "❌ Unsupported operating system ($os) or architecture ($OS_ARCH) detected. Exiting..."
+    exit 1
+fi
 
 # VARS
 source $CONFIG_FILE
@@ -49,7 +65,7 @@ function checkVariable {
 
 # Random suffix generator
 function generate_random_password {
-    tr -dc 'a-z0-9' </dev/urandom | head -c 15
+    LC_ALL=C tr -dc 'a-z0-9' </dev/urandom | head -c 15
 }
 
 function show_tmp_credentials {
@@ -197,12 +213,8 @@ chmod +x $CLUSTER_WORKDIR/oc
 
 #### HELM CLI ####
 HELM_VERSION=latest
-OS_ARCH=amd64
 echo "Downloading the 'helm' command..."
-curl -L "${OCP_DOWNLOAD_BASE_URL%/ocp}/helm/${HELM_VERSION}/helm-${os}-${OS_ARCH}.tar.gz" -o $CLUSTER_WORKDIR/helm.tar.gz
-tar zxvf $CLUSTER_WORKDIR/helm.tar.gz -C $CLUSTER_WORKDIR
-rm -f $CLUSTER_WORKDIR/helm.tar.gz
-mv $CLUSTER_WORKDIR/helm-$os-$OS_ARCH $CLUSTER_WORKDIR/helm
+curl -L "${OCP_DOWNLOAD_BASE_URL%/ocp}/helm/${HELM_VERSION}/helm-${os}-${OS_ARCH}" -o $CLUSTER_WORKDIR/helm
 chmod +x $CLUSTER_WORKDIR/helm
 
 #### OCP CONFIG ####
