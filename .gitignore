@@ -5,3 +5,4 @@ workdir-*
 auth/group-cluster-admins.yaml
 auth/*.htpasswd
 etcd-backup
+.DS_Store
