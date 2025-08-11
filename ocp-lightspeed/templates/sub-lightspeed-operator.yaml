@@ -7,7 +7,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-5"
 spec:
-  channel: alpha
+  channel: stable
   installPlanApproval: Automatic
   name: lightspeed-operator
   source: redhat-operators
