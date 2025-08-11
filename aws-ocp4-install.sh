@@ -9,7 +9,7 @@ set -e
 
 CONFIG_FILE="${1:-aws-ocp4-config-labs}"
 
-echo "Using config file: $CONFIG_FILE"
+echo "📁 Using config file: $CONFIG_FILE"
 
 ## Set architecture variables
 case "$(uname -s)" in
@@ -25,8 +25,8 @@ case "$(uname -m)" in
 esac
 
 # Show detected values
-echo "Detected operating system: $os"
-echo "Detected architecture: $OS_ARCH"
+echo "🖥️  Detected operating system: $os"
+echo "🏗️  Detected architecture: $OS_ARCH"
 
 # Validate both
 if [ "$os" = "unknown" ] || [ "$OS_ARCH" = "unknown" ]; then
@@ -58,7 +58,7 @@ function helm() {
 
 function checkVariable {
     if [[ -z ${!1} ]]; then
-        echo "Must provide $1 in environment!" 1>&2
+        echo "❌ Must provide $1 in environment!" 1>&2
         exit 1
     fi
 }
@@ -70,12 +70,12 @@ function generate_random_password {
 
 function show_tmp_credentials {
     rm $HTPASSWD_PATH
-    echo "The password is $K_DEFAULT_PASSWD and is stored in this temp htpasswd file $HTPASSWD_PATH"
+    echo "🔑 The password is $K_DEFAULT_PASSWD and is stored in this temp htpasswd file $HTPASSWD_PATH"
 }
 
-echo -e "\n================="
-echo -e "=   PRE-CHECKS  ="
-echo -e "=================\n"
+echo -e "\n🔍 ================="
+echo -e "🔍 =   PRE-CHECKS  ="
+echo -e "🔍 =================\n"
 
 
 ### PREREQUISITES ### 
@@ -89,15 +89,15 @@ checkVariable "INSTALL_OPENSHIFT_GITOPS"
 # Check if the users file exists. If not, generate a temporary one and share the password at the end.
 if [ -f ${HTPASSWD_PATH:-auth/users.htpasswd} ]; then
 
-    echo -e "\nThe users htpasswd file exists."
+    echo -e "\n✅ The users htpasswd file exists."
 
 else 
-    echo -e "\nThe users file does not exist, we will generate a user/password file."
+    echo -e "\n⚠️  The users file does not exist, we will generate a user/password file."
     K_DEFAULT_PASSWD=$(generate_random_password)
     HTPASSWD_PATH=$(mktemp -t users.htpasswd.XXXXXXXXXX)
     GROUP_FILE_PATH=${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml.example}
     htpasswd -b -B $HTPASSWD_PATH redhat $K_DEFAULT_PASSWD
-    echo "The password is $K_DEFAULT_PASSWD and is stored in this temp htpasswd file $HTPASSWD_PATH, which contents are: "
+    echo "🔑 The password is $K_DEFAULT_PASSWD and is stored in this temp htpasswd file $HTPASSWD_PATH, which contents are: "
     cat $HTPASSWD_PATH
     trap show_tmp_credentials EXIT
 fi 
@@ -105,33 +105,33 @@ fi
 # Check if the user / password is correct, so that auth section works fine.
 if command -v htpasswd &> /dev/null; then
     if ! htpasswd -vb "${HTPASSWD_PATH:-auth/users.htpasswd}" $K_DEFAULT_USER $K_DEFAULT_PASSWD; then
-        echo "Password verification failed for user $K_DEFAULT_USER or user does not exist"
+        echo "❌ Password verification failed for user $K_DEFAULT_USER or user does not exist"
         echo "Check line 27 and "
         exit 1
     fi
 else
-    echo "htpasswd command not found"
-    echo "You should install it if you want this verification."
-    echo "In Fedora: sudo dnf install httpd-tools"
+    echo "⚠️  htpasswd command not found"
+echo "💡 You should install it if you want this verification."
+echo "🐧 In Fedora: sudo dnf install httpd-tools"
 fi
 
 # Check that the podman cli is installed if you want the certificates.
 if ! command -v podman &>/dev/null && [[ ${INSTALL_LETS_ENCRYPT_CERTIFICATES} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
-    echo "Podman is not installed, and INSTALL_LETS_ENCRYPT_CERTIFICATES is set to True/Yes/1."
-    echo "Exiting. Please, install podman."
+    echo "❌ Podman is not installed, and INSTALL_LETS_ENCRYPT_CERTIFICATES is set to True/Yes/1."
+echo "💡 Exiting. Please, install podman."
     exit 1
 fi
 
 # Check that the aws cli is installed if you want to reuse the VPC.
 if ! command -v aws &>/dev/null && [[ ${REUSE_AWS_VPC} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
-    echo "aws cli is not installed, and REUSE_AWS_VPC is set to True/Yes/1."
-    echo "Exiting. Please, install aws cli or just deploy one cluster."
+    echo "❌ aws cli is not installed, and REUSE_AWS_VPC is set to True/Yes/1."
+echo "💡 Exiting. Please, install aws cli or just deploy one cluster."
     exit 1
 fi
 
 # Add support for reusing a previously created VPC
 if [[ "$REUSE_AWS_VPC" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
-    echo "Existing VPC is $EXISTING_VPC..."
+    echo "🌐 Existing VPC is $EXISTING_VPC..."
 
     # Fetch the Subnet IDs associated with the specified VPC
     SUBNET_IDS=$(aws ec2 describe-subnets \
@@ -142,11 +142,11 @@ if [[ "$REUSE_AWS_VPC" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
     # Convert Subnet IDs into a single-line YAML array
     EXISTING_SUBNETS="subnets: [$(echo $SUBNET_IDS | sed "s/ /', '/g" | sed "s/^/'/;s/$/'/")]"
 
-    echo "Existing subnets are:"
+    echo "🔌 Existing subnets are:"
     echo "$EXISTING_SUBNETS"
 else
     EXISTING_SUBNETS=""
-    echo "No existing VPC, so no subnets..."
+    echo "🆕 No existing VPC, so no subnets..."
 fi
 
 # Add support to change the default volume size of Worker nodes
@@ -156,9 +156,9 @@ fi
 
 #### Print Variables ####
 echo
-echo ------------------------------------
-echo Configuration variables
-echo ------------------------------------
+echo ⚙️  ------------------------------------
+echo ⚙️  Configuration variables
+echo ⚙️  ------------------------------------
 echo OPENSHIFT_VERSION=$OPENSHIFT_VERSION
 echo RHPDS_GUID=$RHPDS_GUID
 echo RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN
@@ -172,31 +172,31 @@ echo AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 echo INSTALL_LETS_ENCRYPT_CERTIFICATES=$INSTALL_LETS_ENCRYPT_CERTIFICATES
 echo INSTALL_OPENSHIFT_GITOPS=$INSTALL_OPENSHIFT_GITOPS
 echo INSTALL_OPENSHIFT_LIGHTSPEED=$INSTALL_OPENSHIFT_LIGHTSPEED
-echo ------------------------------------
+echo ⚙️  ------------------------------------
 
-echo -e "\n============================="
-echo -e "=   OPENSHIFT INSTALLATION  ="
-echo -e "=============================\n"
+echo -e "\n🚀 ============================="
+echo -e "🚀 =   OPENSHIFT INSTALLATION  ="
+echo -e "🚀 =============================\n"
 
 
 # Check if the folder exists
 if [ -d "$CLUSTER_WORKDIR" ]; then
-    echo "Error: The folder '$CLUSTER_WORKDIR' already exists. Please delete it before proceeding."
+    echo "❌ Error: The folder '$CLUSTER_WORKDIR' already exists. Please delete it before proceeding."
     exit 1 # Exit with a non-zero status to indicate failure
 else
-    echo "The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
+    echo "✅ The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
 fi
 
 # #### AWS ####
 
-echo "Installation directoy is $CLUSTER_WORKDIR"
+echo "📂 Installation directory is $CLUSTER_WORKDIR"
 
 mkdir -p $CLUSTER_WORKDIR
 echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
 
 #### OCP INSTALLER ####
 
-echo "Downloading the 'openshift-install' command..."
+echo "⬇️  Downloading the 'openshift-install' command..."
 
 curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
 tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
@@ -204,7 +204,7 @@ rm -f $CLUSTER_WORKDIR/openshift-install.tar.gz
 chmod +x $CLUSTER_WORKDIR/openshift-install
 
 #### OC CLI ####
-echo "Downloading the 'oc' command..."
+echo "⬇️  Downloading the 'oc' command..."
 
 curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
 tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
@@ -213,7 +213,7 @@ chmod +x $CLUSTER_WORKDIR/oc
 
 #### HELM CLI ####
 HELM_VERSION=latest
-echo "Downloading the 'helm' command..."
+echo "⬇️  Downloading the 'helm' command..."
 curl -L "${OCP_DOWNLOAD_BASE_URL%/ocp}/helm/${HELM_VERSION}/helm-${os}-${OS_ARCH}" -o $CLUSTER_WORKDIR/helm
 chmod +x $CLUSTER_WORKDIR/helm
 
@@ -235,14 +235,12 @@ $CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-l
 
 sleep 5
 
-echo -e "\nDelete all the pods in Error state after installation (openshift-kube-apiserver, openshift-kube-scheduler, etc)"
-oc get pods --all-namespaces | grep -E "Error|Failed" | awk '{print "oc delete pod " $2 " -n " $1}' | bash
 
 #### CREATE USERS ####
 
-echo -e "\n==============================="
-echo -e "=   Configure authentication  ="
-echo -e "===============================\n"
+echo -e "\n🔑==============================="
+echo -e "🔑=   Configure authentication  ="
+echo -e "🔑===============================\n"
 
 KUBEADMIN_PASSWORD=$(cat "$CLUSTER_WORKDIR/auth/kubeadmin-password")
 OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
@@ -261,41 +259,46 @@ oc apply -f auth/clusterrolebinding-cluster-admins.yaml
 # Do not add default user as a group, but directly admin (It does not inherit access to gitOps)
 oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
 
-echo "Waiting some time to get OAuth configured..."
+echo -e "\n🔐Waiting some time to get OAuth configured..."
 sleep 40
 
-# auth
-echo -en "\nWaiting for authentication configuration to be ready..."
-
-MAX_ATTEMPTS=${MAX_ATTEMPTS:-50}
+MAX_ATTEMPTS=${MAX_ATTEMPTS:-60}
 ATTEMPT=0
-K_LOGIN_SUCCESS=-1
 
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if oc login -u ${K_DEFAULT_USER} -p ${K_DEFAULT_PASSWD} $OCP_API --insecure-skip-tls-verify=true &> /dev/null; then
-        K_LOGIN_SUCCESS=0
+    ATTEMPT=$((ATTEMPT + 1))
+    printf "[%02d/%02d] Testing login... " "$ATTEMPT" "$MAX_ATTEMPTS"
+    
+    if oc login -u "${K_DEFAULT_USER}" -p "${K_DEFAULT_PASSWD}" "$OCP_API" --insecure-skip-tls-verify=true &>/dev/null; then
+        echo "✅ Success!"
+        echo "🎉 Logged in as: ${K_DEFAULT_USER}"
+        
+        # Remove kubeadmin if using different user
+        if [ "${K_DEFAULT_USER}" != "kubeadmin" ]; then
+            echo "🔧 Removing kubeadmin user..."
+            oc delete secret kubeadmin -n kube-system &>/dev/null || echo "⚠️  kubeadmin already removed"
+        fi
         break
     fi
-    echo -n "."
-    ATTEMPT=$((ATTEMPT + 1))
-    sleep 5
+    
+    echo "⏳ Not ready yet"
+    [ $ATTEMPT -lt $MAX_ATTEMPTS ] && sleep 2
 done
 
-if [ $K_LOGIN_SUCCESS -eq 0 ]; then
-    echo -e " [OK]"
-    echo "Deleting kubeadmin password in cluster $OCP_API"
-    oc delete secret kubeadmin -n kube-system
-else
-    echo -e "\nERROR: Could not login using ${K_DEFAULT_USER} user in cluster $OCP_API after $MAX_ATTEMPTS attempts."
-    echo "Please, check user provisioning manually using kubeadmin user."
-    K_DEFAULT_USER="kubeadmin"
+if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+    echo "❌ Authentication failed after 2 minutes"
+    echo "💡 Try: oc login -u kubeadmin -p \$(cat $CLUSTER_WORKDIR/auth/kubeadmin-password) $OCP_API"
+    exit 1
 fi
+
+echo -e "\nDelete all the pods in Error state after installation (openshift-kube-apiserver, openshift-kube-scheduler, etc)"
+oc get pods --all-namespaces | grep -E "Error|Failed" | awk '{print "oc delete pod " $2 " -n " $1}' | bash
 
 if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
-    echo -e "\n==============================="
-    echo -e "=      INSTALL OCP GITOPS     ="
-    echo -e "===============================\n"
+    echo -e "\n⚙️==============================="
+    echo -e "⚙️=      INSTALL OCP GITOPS     ="
+    echo -e "⚙️===============================\n"
 
     # Install OpenShift GitOps operator
     echo -e "\n[1/2]Install OpenShift GitOps operator"
@@ -322,9 +325,9 @@ fi
 
 if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
-    echo -e "\n==============================="
-    echo -e "=     INSTALL CERTIFICATES    ="
-    echo -e "===============================\n"
+    echo -e "\n📋==============================="
+    echo -e "📋=     INSTALL CERTIFICATES    ="
+    echo -e "📋===============================\n"
 
     # Install OpenShift cert-manager operator
     oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/refs/heads/main/application-02-cert-manager-operator.yaml
@@ -373,9 +376,9 @@ fi
 
 if [[ "$INSTALL_OPENSHIFT_LIGHTSPEED" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
-    echo -e "\n================================="
-    echo -e "=     INSTALL OCP LIGHTSPEED    ="
-    echo -e "=================================\n"
+    echo -e "\n💡================================="
+    echo -e "💡=     INSTALL OCP LIGHTSPEED    ="
+    echo -e "💡=================================\n"
 
     checkVariable "OLS_PROVIDER_NAME"
     checkVariable "OLS_PROVIDER_MODEL_NAME"
@@ -394,9 +397,9 @@ fi
 
 OCP_CONSOLE=https://console-openshift-console.apps.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN
 
-echo -e "\n==============================="
-echo -e "=   Installation finished!!!  ="
-echo -e "===============================\n"
+echo -e "\n🏁================================="
+echo -e "🏁=    INSTALLATION FINISHED!!!   ="
+echo -e "🏁=================================\n"
 echo -e "\nYou can access the cluster using the console or the CLI"
 echo -e "\t* Web: $OCP_CONSOLE"
 echo -e "\t* CLI: oc login -u ${K_DEFAULT_USER} $OCP_API # You can use any other user"
