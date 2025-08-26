@@ -316,6 +316,7 @@ if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
         --set global.namespace=openshift-gitops \
         --set global.clusterName=argocd \
         --set argoRollout.enabled=true \
+        --set server.disableAdmin=false \
         --set global.clusterDomain=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') 
 
     # Wait for Deployment
