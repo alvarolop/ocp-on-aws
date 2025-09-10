@@ -234,12 +234,16 @@ oc adm policy add-cluster-role-to-user cluster-admin myusername
 
 # Annex: Recover from expired certificates
 
+First, you can check the CSRs that are pending:
 
 ```bash
-for id in $(oc get csr | grep Pending | awk '{print $1}'); do
-   oc adm certificate approve $id;
-done
-for id in $(oc --kubeconfig=kubeconfig --insecure-skip-tls-verify get csr | grep Pending | awk '{print $1}'); do
- oc --kubeconfig=kubeconfig --insecure-skip-tls-verify  adm certificate approve $id; 
-done
+source ./aws-ocp4-config-labs
+oc --insecure-skip-tls-verify --kubeconfig ./workdir-sandbox${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN//[^0-9]/}-$CLUSTER_NAME/auth/kubeconfig get csr -A 
 ```
+
+Now, you can basically approve all the CSRs:
+```bash
+oc --insecure-skip-tls-verify --kubeconfig ./workdir-sandbox${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN//[^0-9]/}-$CLUSTER_NAME/auth/kubeconfig get csr|grep Pending|awk '{print $1}'|xargs -i oc --insecure-skip-tls-verify --kubeconfig ./workdir-sandbox${RHPDS_TOP_LEVEL_ROUTE53_DOMAIN//[^0-9]/}-$CLUSTER_NAME/auth/kubeconfig  adm certificate approve {}
+```
+
+Wait a few minutes and check the Web Console. You should be able to login now.
