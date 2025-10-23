@@ -56,6 +56,14 @@ This automation will automatically create certain users on the cluster and add t
 * Copy the `group-cluster-admins.yaml.example` file to `group-cluster-admins.yaml` inside the `auth` folder and add the users you want to give `cluster-admin` to.
 
 
+To simplify it, you can run the following commands:
+
+```bash
+cp auth/users.htpasswd.example auth/users.htpasswd
+cp auth/group-cluster-admins.yaml.example auth/group-cluster-admins.yaml
+```
+
+
 ### 3. Add it all to the config file
 
 **Create a copy** and **modify** [aws-ocp4-config](aws-ocp4-config) file. This file contains required config data used by the installation script to provision and configure the new OCP 4 cluster. Use the new file as source of configuration for the installation.
@@ -68,7 +76,7 @@ AWS and installation parameters that **you are required to modify**:
 * **AWS_ACCESS_KEY_ID**: You can find it on the email.
 * **AWS_SECRET_ACCESS_KEY**: You can find it on the email.
 * **AWS_DEFAULT_REGION**: This is the region where your cluster will be deployed. I recommend `eu-west-1` to simplify automation of further components.
-* **RHOCM_PULL_SECRET**: Enter Pull Secret given from RedHat OpenShift Cluster Manager [site](https://console.redhat.com/openshift/create) for an AWS IPI installation
+* **RHOCM_PULL_SECRET**: Enter Pull Secret given from RedHat OpenShift Cluster Manager [site](https://console.redhat.com/openshift/downloads#tool-pull-secret) for an AWS IPI installation
 
 
 OCP parameters to configure your cluster. **These are optional, as you can use the defaults**:
