@@ -84,7 +84,17 @@ checkVariable "AWS_SECRET_ACCESS_KEY"
 checkVariable "AWS_DEFAULT_REGION"
 checkVariable "INSTALL_LETS_ENCRYPT_CERTIFICATES"
 checkVariable "INSTALL_OPENSHIFT_GITOPS"
+checkVariable "INSTALL_OPENSHIFT_LIGHTSPEED"
 
+# Check that GitOps is enabled if certificates or Lightspeed are enabled.
+if [[ ! ${INSTALL_OPENSHIFT_GITOPS} =~ ^([Tt]rue|[Yy]es|[1])$ ]] && \
+   ([[ ${INSTALL_LETS_ENCRYPT_CERTIFICATES} =~ ^([Tt]rue|[Yy]es|[1])$ ]] || \
+    [[ ${INSTALL_OPENSHIFT_LIGHTSPEED} =~ ^([Tt]rue|[Yy]es|[1])$ ]]); then
+    echo "❌ GitOps is disabled, but Let's Encrypt certificates or Lightspeed are enabled."
+    echo "💡 The current config mechanism for these two features is gitops-only."
+    echo "💡 Either disable them in the config file or enable GitOps."
+    exit 1
+fi
 
 # Check if the users file exists. If not, generate a temporary one and share the password at the end.
 if [ -f ${HTPASSWD_PATH:-auth/users.htpasswd} ]; then
@@ -115,12 +125,7 @@ echo "💡 You should install it if you want this verification."
 echo "🐧 In Fedora: sudo dnf install httpd-tools"
 fi
 
-# Check that the podman cli is installed if you want the certificates.
-if ! command -v podman &>/dev/null && [[ ${INSTALL_LETS_ENCRYPT_CERTIFICATES} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
-    echo "❌ Podman is not installed, and INSTALL_LETS_ENCRYPT_CERTIFICATES is set to True/Yes/1."
-echo "💡 Exiting. Please, install podman."
-    exit 1
-fi
+
 
 # Check that the aws cli is installed if you want to reuse the VPC.
 if ! command -v aws &>/dev/null && [[ ${REUSE_AWS_VPC} =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
