@@ -13,9 +13,14 @@ echo "📁 Using config file: $CONFIG_FILE"
 
 ## Set architecture variables
 case "$(uname -s)" in
-    Linux*)  os=linux;;
-    Darwin*) os=darwin;;
-    *)       os=unknown;;
+    Linux*)  os_platform=linux;;
+    Darwin*) os_platform=mac;;
+    *)       os_platform=unknown;;
+esac
+case "$(uname -s)" in
+    Linux*)  helm_platform=linux;;
+    Darwin*) helm_platform=darwin;;
+    *)       helm_platform=unknown;;
 esac
 
 case "$(uname -m)" in
@@ -25,12 +30,12 @@ case "$(uname -m)" in
 esac
 
 # Show detected values
-echo "🖥️  Detected operating system: $os"
+echo "🖥️  Detected operating system: $os_platform ($helm_platform for helm)"
 echo "🏗️  Detected architecture: $OS_ARCH"
 
 # Validate both
-if [ "$os" = "unknown" ] || [ "$OS_ARCH" = "unknown" ]; then
-    echo "❌ Unsupported operating system ($os) or architecture ($OS_ARCH) detected. Exiting..."
+if [ "$os_platform" = "unknown" ] || [ "$OS_ARCH" = "unknown" ]; then
+    echo "❌ Unsupported operating system ($os_platform) or architecture ($OS_ARCH) detected. Exiting..."
     exit 1
 fi
 
@@ -203,7 +208,7 @@ echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
 
 echo "⬇️  Downloading the 'openshift-install' command..."
 
-curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
+curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os_platform}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
 tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/openshift-install.tar.gz
 chmod +x $CLUSTER_WORKDIR/openshift-install
@@ -211,7 +216,7 @@ chmod +x $CLUSTER_WORKDIR/openshift-install
 #### OC CLI ####
 echo "⬇️  Downloading the 'oc' command..."
 
-curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os}-${OPENSHIFT_VERSION}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
+curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os_platform}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
 tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
 rm -f $CLUSTER_WORKDIR/oc.tar.gz
 chmod +x $CLUSTER_WORKDIR/oc
@@ -219,7 +224,7 @@ chmod +x $CLUSTER_WORKDIR/oc
 #### HELM CLI ####
 HELM_VERSION=latest
 echo "⬇️  Downloading the 'helm' command..."
-curl -L "${OCP_DOWNLOAD_BASE_URL%/ocp}/helm/${HELM_VERSION}/helm-${os}-${OS_ARCH}" -o $CLUSTER_WORKDIR/helm
+curl -L "${OCP_DOWNLOAD_BASE_URL%/ocp}/helm/${HELM_VERSION}/helm-${helm_platform}-${OS_ARCH}" -o $CLUSTER_WORKDIR/helm
 chmod +x $CLUSTER_WORKDIR/helm
 
 #### OCP CONFIG ####
