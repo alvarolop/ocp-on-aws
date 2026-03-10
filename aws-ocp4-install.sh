@@ -435,3 +435,10 @@ echo -e "\nYou can access the cluster using the console or the CLI"
 echo -e "\t* Web: $OCP_CONSOLE"
 echo -e "\t* CLI: oc login -u ${K_DEFAULT_USER} $OCP_API # You can use any other user"
 echo ""
+echo -e "\tWanna add new instances to the cluster? Here is the AMI ID to use:"
+
+AMI_ID=$(openshift-install coreos print-stream-json | jq -r '.architectures.x86_64.images.aws.regions["'$AWS_DEFAULT_REGION'"].image')
+echo -e "\t* AMI ID: $AMI_ID"
+echo -e "\tOr use the following command to get the AMI ID:"
+echo -e "\t$CLUSTER_WORKDIR/openshift-install coreos print-stream-json | jq -r '.architectures.x86_64.images.aws.regions[\"us-west-1\"].image'"
+echo ""
