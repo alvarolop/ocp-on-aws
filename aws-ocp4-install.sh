@@ -304,6 +304,10 @@ fi
 echo -e "\nDelete all the pods in Error state after installation (openshift-kube-apiserver, openshift-kube-scheduler, etc)"
 oc get pods --all-namespaces | grep -E "Error|Failed" | awk '{print "oc delete pod " $2 " -n " $1}' | bash
 
+
+# echo -e "\nApply the AlertRelabelConfig to demote the receiver alert to info..."
+# oc apply -f ocp/AlertRelabelConfig-demote-receiver-alert.yaml
+
 if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
 
     echo -e "\n⚙️==============================="

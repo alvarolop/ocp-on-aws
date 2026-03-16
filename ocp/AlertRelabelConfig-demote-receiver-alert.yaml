@@ -1,0 +1,26 @@
+---
+apiVersion: monitoring.openshift.io/v1
+kind: AlertRelabelConfig
+metadata:
+  name: demote-receiver-alert
+  namespace: openshift-monitoring
+spec:
+  configs:
+  - sourceLabels: [alertname,severity]
+    regex: 'AlertmanagerReceiversNotConfigured;warning'
+    targetLabel: severity
+    replacement: info
+    action: Replace
+# ---
+# apiVersion: monitoring.openshift.io/v1
+# kind: AlertRelabelConfig
+# metadata:
+#   name: watchdog
+#   namespace: openshift-monitoring
+# spec:
+#   configs:
+#   - sourceLabels: [alertname,severity]
+#     regex: "Watchdog;none"
+#     targetLabel: severity
+#     replacement: critical
+#     action: Replace
