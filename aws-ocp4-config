@@ -37,19 +37,19 @@ OCP_DOWNLOAD_BASE_URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp
 # Machines configuration
 # https://aws.amazon.com/ec2/instance-types/
 # https://aws.amazon.com/ec2/pricing/on-demand/
-## 1) Normal worker => WORKER_INSTANCE_TYPE=m7i.2xlarge
-## 2) Large Worker  => WORKER_INSTANCE_TYPE=m7i.4xlarge
+## 1) Normal worker => WORKER_INSTANCE_TYPE=m8i.2xlarge
+## 2) Large Worker  => WORKER_INSTANCE_TYPE=m8i.4xlarge
 
 # Option 1: Multi-node OCP
-WORKER_INSTANCE_TYPE=m7i-flex.4xlarge # Normal worker nodes
+WORKER_INSTANCE_TYPE=m8i.4xlarge # Normal worker nodes
 # https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/installing_on_aws/installation-config-parameters-aws#installation-configuration-parameters-optional-aws_installation-config-parameters-aws
 # COMPUTE_VOLUME_SIZE=200 # Size in GB. Default is 120GB
 WORKER_REPLICAS=1
-MASTER_INSTANCE_TYPE=m7i-flex.xlarge
+MASTER_INSTANCE_TYPE=m8i.xlarge
 
 # # Option 2: Single-node OCP
 # WORKER_REPLICAS=0
-# MASTER_INSTANCE_TYPE=m7i.4xlarge
+# MASTER_INSTANCE_TYPE=m8i.4xlarge
 # MASTER_REPLICAS=1
 
 # OCP SSL Certificates and GitOps configuration
