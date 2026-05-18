@@ -444,5 +444,5 @@ echo -e "\tWanna add new instances to the cluster? Here is the AMI ID to use:"
 AMI_ID=$(openshift-install coreos print-stream-json | jq -r '.architectures.x86_64.images.aws.regions["'$AWS_DEFAULT_REGION'"].image')
 echo -e "\t* AMI ID: $AMI_ID"
 echo -e "\tOr use the following command to get the AMI ID:"
-echo -e "\t$CLUSTER_WORKDIR/openshift-install coreos print-stream-json | jq -r '.architectures.x86_64.images.aws.regions[\"us-west-1\"].image'"
+echo -e "\t$CLUSTER_WORKDIR/openshift-install coreos print-stream-json | jq -r '.architectures.x86_64.images.aws.regions[\"eu-central-1\"].image'"
 echo ""
