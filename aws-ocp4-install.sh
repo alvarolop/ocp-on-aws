@@ -61,6 +61,10 @@ function helm() {
    $CLUSTER_WORKDIR/helm "$@"
 }
 
+function openshift-install() {
+   $CLUSTER_WORKDIR/openshift-install "$@"
+}
+
 function checkVariable {
     if [[ -z ${!1} ]]; then
         echo "❌ Must provide $1 in environment!" 1>&2
@@ -241,7 +245,7 @@ cat $CLUSTER_WORKDIR/install-config.yaml
 
 #### OCP INSTALLATION ####
 
-$CLUSTER_WORKDIR/openshift-install --dir $CLUSTER_WORKDIR create cluster --log-level debug
+openshift-install --dir $CLUSTER_WORKDIR create cluster --log-level debug
 
 sleep 5
 
