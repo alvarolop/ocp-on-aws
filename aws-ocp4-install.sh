@@ -226,9 +226,17 @@ rm -f $CLUSTER_WORKDIR/oc.tar.gz
 chmod +x $CLUSTER_WORKDIR/oc
 
 #### HELM CLI ####
-HELM_VERSION=latest
-echo "⬇️  Downloading the 'helm' command..."
-curl -L "${OCP_DOWNLOAD_BASE_URL%/ocp}/helm/${HELM_VERSION}/helm-${helm_platform}-${OS_ARCH}" -o $CLUSTER_WORKDIR/helm
+HELM_VERSION=${HELM_VERSION:-3.21.2}
+HELM_DOWNLOAD_URL="https://mirror.openshift.com/pub/cgw/helm/${HELM_VERSION}/helm-${helm_platform}-${OS_ARCH}"
+echo "⬇️  Downloading the 'helm' command (v${HELM_VERSION})..."
+curl -fL "$HELM_DOWNLOAD_URL" -o $CLUSTER_WORKDIR/helm
+if ! file $CLUSTER_WORKDIR/helm | grep -q "ELF\|Mach-O"; then
+    echo "❌ Downloaded helm is not a valid binary. Content:"
+    head -2 $CLUSTER_WORKDIR/helm
+    echo "URL was: $HELM_DOWNLOAD_URL"
+    echo "Falling back to upstream Helm..."
+    curl -fsSL https://get.helm.sh/helm-v${HELM_VERSION}-${helm_platform}-${OS_ARCH}.tar.gz | tar -xz --strip-components=1 -C $CLUSTER_WORKDIR ${helm_platform}-${OS_ARCH}/helm
+fi
 chmod +x $CLUSTER_WORKDIR/helm
 
 #### OCP CONFIG ####
