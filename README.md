@@ -225,7 +225,7 @@ helm template ocp-lightspeed \
 ```
 
 
-For more information about how to configure this feature, check the [official documentation](https://docs.openshift.com/lightspeed/1.0tp1/about/ols-about-openshift-lightspeed.html).
+For more information about how to configure this feature, check the [official documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_lightspeed/2.0).
 
 
 # Annex: Add users to OCP cluster after install

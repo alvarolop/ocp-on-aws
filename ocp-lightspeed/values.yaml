@@ -32,7 +32,3 @@ introspection:
 
 queryFilters:
   enabled: false
-
-rag:
-  enabled: false
-  image: "quay.io/dialvare/acme-byok:latest"

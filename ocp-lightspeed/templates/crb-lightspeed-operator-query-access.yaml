@@ -1,5 +1,5 @@
 ---
-# https://docs.redhat.com/en/documentation/red_hat_openshift_lightspeed/1.0tp1/html-single/configure/index#ols-about-lightspeed-and-role-based-access-control_ols-configuring-openshift-lightspeed
+# https://docs.redhat.com/en/documentation/red_hat_openshift_lightspeed/2.0
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
