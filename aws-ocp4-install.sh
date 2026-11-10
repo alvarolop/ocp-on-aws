@@ -423,20 +423,19 @@ fi
 if [[ "$WORKER_REPLICAS" -eq 0 ]]; then
     echo "🎯 Adding three MachineSets (AZs) for the future, just if you want to scale up an SNO"
 
-    AWS_INSTANCE_TYPE=m7i.xlarge # 16GB + 4vCPU
     oc process -f ocp/template-worker.yaml \
         -p INFRASTRUCTURE_ID=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster) \
-        -p INSTANCE_TYPE="$AWS_INSTANCE_TYPE" -p AZ="a" -p REPLICAS=0 | \
+        -p INSTANCE_TYPE="$MASTER_INSTANCE_TYPE" -p AZ="a" -p REPLICAS=0 | \
         oc apply -n openshift-machine-api -f -
 
     oc process -f ocp/template-worker.yaml \
         -p INFRASTRUCTURE_ID=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster) \
-        -p INSTANCE_TYPE="$AWS_INSTANCE_TYPE" -p AZ="b" -p REPLICAS=0 | \
+        -p INSTANCE_TYPE="$MASTER_INSTANCE_TYPE" -p AZ="b" -p REPLICAS=0 | \
         oc apply -n openshift-machine-api -f -
 
     oc process -f ocp/template-worker.yaml \
         -p INFRASTRUCTURE_ID=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster) \
-        -p INSTANCE_TYPE="$AWS_INSTANCE_TYPE" -p AZ="c" -p REPLICAS=0 | \
+        -p INSTANCE_TYPE="$MASTER_INSTANCE_TYPE" -p AZ="c" -p REPLICAS=0 | \
         oc apply -n openshift-machine-api -f -
 fi
 
