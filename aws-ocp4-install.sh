@@ -2,6 +2,8 @@
 
 # exec examples
 # ./aws-ocp4-install.sh aws-ocp4-config
+# Run only some steps (install auth gitops certificates lightspeed machinesets), e.g. to resume after a failure:
+# STEPS="gitops,certificates" ./aws-ocp4-install.sh aws-ocp4-config
 # GROUP_FILE_PATH=auth/other-group-cluster-admins.yaml HTPASSWD_PATH=auth/other-users.htpasswd ./aws-ocp4-install.sh aws-ocp4-config
 
 set -e
@@ -188,248 +190,303 @@ echo INSTALL_OPENSHIFT_GITOPS=$INSTALL_OPENSHIFT_GITOPS
 echo INSTALL_OPENSHIFT_LIGHTSPEED=$INSTALL_OPENSHIFT_LIGHTSPEED
 echo ⚙️  ------------------------------------
 
-echo -e "\n🚀 ============================="
-echo -e "🚀 =   OPENSHIFT INSTALLATION  ="
-echo -e "🚀 =============================\n"
 
-
-# Check if the folder exists
-if [ -d "$CLUSTER_WORKDIR" ]; then
-    echo "❌ Error: The folder '$CLUSTER_WORKDIR' already exists. Please delete it before proceeding."
-    exit 1 # Exit with a non-zero status to indicate failure
-else
-    echo "✅ The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
-fi
-
-# #### AWS ####
-
-echo "📂 Installation directory is $CLUSTER_WORKDIR"
-
-mkdir -p $CLUSTER_WORKDIR
-echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
-
-#### OCP INSTALLER ####
-
-echo "⬇️  Downloading the 'openshift-install' command..."
-
-curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os_platform}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
-tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
-rm -f $CLUSTER_WORKDIR/openshift-install.tar.gz
-chmod +x $CLUSTER_WORKDIR/openshift-install
-
-#### OC CLI ####
-echo "⬇️  Downloading the 'oc' command..."
-
-curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os_platform}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
-tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
-rm -f $CLUSTER_WORKDIR/oc.tar.gz
-chmod +x $CLUSTER_WORKDIR/oc
-
-#### HELM CLI ####
-HELM_VERSION=${HELM_VERSION:-3.21.2}
-HELM_DOWNLOAD_URL="https://mirror.openshift.com/pub/cgw/helm/${HELM_VERSION}/helm-${helm_platform}-${OS_ARCH}"
-echo "⬇️  Downloading the 'helm' command (v${HELM_VERSION})..."
-curl -fL "$HELM_DOWNLOAD_URL" -o $CLUSTER_WORKDIR/helm
-if ! file $CLUSTER_WORKDIR/helm | grep -q "ELF\|Mach-O"; then
-    echo "❌ Downloaded helm is not a valid binary. Content:"
-    head -2 $CLUSTER_WORKDIR/helm
-    echo "URL was: $HELM_DOWNLOAD_URL"
-    echo "Falling back to upstream Helm..."
-    curl -fsSL https://get.helm.sh/helm-v${HELM_VERSION}-${helm_platform}-${OS_ARCH}.tar.gz | tar -xz --strip-components=1 -C $CLUSTER_WORKDIR ${helm_platform}-${OS_ARCH}/helm
-fi
-chmod +x $CLUSTER_WORKDIR/helm
-
-#### OCP CONFIG ####
-cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN CLUSTER_NAME=$CLUSTER_NAME \
-  AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION RHOCM_PULL_SECRET=$RHOCM_PULL_SECRET \
-  WORKER_INSTANCE_TYPE=$WORKER_INSTANCE_TYPE WORKER_REPLICAS=$WORKER_REPLICAS \
-  MASTER_INSTANCE_TYPE=$MASTER_INSTANCE_TYPE MASTER_REPLICAS=${MASTER_REPLICAS:-3} \
-  EXISTING_SUBNETS=$EXISTING_SUBNETS SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY \
-  COMPUTE_ROOT_VOLUME=$COMPUTE_ROOT_VOLUME \
-  envsubst > $CLUSTER_WORKDIR/install-config.yaml
-
-echo -e "\nThis is the value of the install-config YAML:"
-cat $CLUSTER_WORKDIR/install-config.yaml 
-
-#### OCP INSTALLATION ####
-
-openshift-install --dir $CLUSTER_WORKDIR create cluster --log-level debug
-
-sleep 5
-
-
-#### CREATE USERS ####
-
-echo -e "\n🔑==============================="
-echo -e "🔑=   Configure authentication  ="
-echo -e "🔑===============================\n"
-
-KUBEADMIN_PASSWORD=$(cat "$CLUSTER_WORKDIR/auth/kubeadmin-password")
 OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
 
-echo -e "\t- kubeadmin password: $KUBEADMIN_PASSWORD"
-echo -e "\t- Cluster api url: $OCP_API"
-echo ""
+### STEPS ###
+# Steps run in this fixed order. Use STEPS to run only some of them, e.g. to resume after a failure.
+ALL_STEPS="install auth gitops certificates lightspeed machinesets"
+STEPS="${STEPS:-$ALL_STEPS}"
+STEPS="${STEPS//,/ }"
 
-oc login -u kubeadmin -p $KUBEADMIN_PASSWORD $OCP_API --insecure-skip-tls-verify=true
-
-oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd="${HTPASSWD_PATH:-auth/users.htpasswd}"
-oc apply -f auth/oauth-cluster.yaml
-oc apply -f "${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml}"
-oc apply -f auth/clusterrolebinding-cluster-admins.yaml
-
-# Do not add default user as a group, but directly admin (It does not inherit access to gitOps)
-oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
-
-echo -e "\n🔐Waiting some time to get OAuth configured..."
-sleep 40
-
-MAX_ATTEMPTS=${MAX_ATTEMPTS:-60}
-ATTEMPT=0
-
-while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    ATTEMPT=$((ATTEMPT + 1))
-    printf "[%02d/%02d] Testing login... " "$ATTEMPT" "$MAX_ATTEMPTS"
-    
-    if oc login -u "${K_DEFAULT_USER}" -p "${K_DEFAULT_PASSWD}" "$OCP_API" --insecure-skip-tls-verify=true &>/dev/null; then
-        echo "✅ Success!"
-        echo "🎉 Logged in as: ${K_DEFAULT_USER}"
-        
-        # Remove kubeadmin if using different user
-        if [ "${K_DEFAULT_USER}" != "kubeadmin" ]; then
-            echo "🔧 Removing kubeadmin user..."
-            oc delete secret kubeadmin -n kube-system &>/dev/null || echo "⚠️  kubeadmin already removed"
-        fi
-        break
+for s in $STEPS; do
+    if [[ " $ALL_STEPS " != *" $s "* ]]; then
+        echo "❌ Unknown step '$s'. Valid steps: $ALL_STEPS" 1>&2
+        exit 1
     fi
-    
-    echo "⏳ Not ready yet"
-    [ $ATTEMPT -lt $MAX_ATTEMPTS ] && sleep 2
 done
 
-if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-    echo "❌ Authentication failed after 2 minutes"
-    echo "💡 Try: oc login -u kubeadmin -p \$(cat $CLUSTER_WORKDIR/auth/kubeadmin-password) $OCP_API"
-    exit 1
-fi
+function run_step() {
+    [[ " $STEPS " == *" $1 "* ]]
+}
 
-echo -e "\nDelete all the pods in Error state after installation (openshift-kube-apiserver, openshift-kube-scheduler, etc)"
-oc get pods --all-namespaces | grep -E "Error|Failed" | awk '{print "oc delete pod " $2 " -n " $1}' | bash
+echo "🪜 Steps to run: $STEPS"
 
 
-# echo -e "\nApply the AlertRelabelConfig to demote the receiver alert to info..."
-# oc apply -f ocp/AlertRelabelConfig-demote-receiver-alert.yaml
+# Download the CLIs, generate install-config and create the cluster
+function step_install() {
+    # Check if the folder exists
+    if [ -d "$CLUSTER_WORKDIR" ]; then
+        echo "❌ Error: The folder '$CLUSTER_WORKDIR' already exists. Please delete it before proceeding."
+        exit 1 # Exit with a non-zero status to indicate failure
+    else
+        echo "✅ The folder '$CLUSTER_WORKDIR' does not exist. Proceeding..."
+    fi
 
-if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+    # #### AWS ####
 
-    echo -e "\n⚙️==============================="
-    echo -e "⚙️=      INSTALL OCP GITOPS     ="
-    echo -e "⚙️===============================\n"
+    echo "📂 Installation directory is $CLUSTER_WORKDIR"
 
-    # Install OpenShift GitOps operator
-    echo -e "\n[1/2]Install OpenShift GitOps operator"
+    mkdir -p $CLUSTER_WORKDIR
+    echo "$K_DEFAULT_PASSWD" >> $CLUSTER_WORKDIR/default-user-password
 
-    oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/argocd-operator-install.yaml
+    #### OCP INSTALLER ####
 
-    echo -n "Waiting for pods ready..."
-    while [[ $(oc get pods -l control-plane=gitops-operator -n openshift-gitops-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+    echo "⬇️  Downloading the 'openshift-install' command..."
 
-    # Deploy the ArgoCD instance
-    echo -e "\n[2/2]Deploy the ArgoCD instance"
-    helm repo add alvarolop-gitops https://alvarolop.github.io/ocp-gitops-playground/
-    helm repo update alvarolop-gitops
-    helm upgrade --install argocd alvarolop-gitops/argocd-config --namespace openshift-gitops \
-        --set global.namespace=openshift-gitops \
-        --set global.clusterName=argocd \
-        --set argoRollout.enabled=true \
-        --set server.disableAdmin=false \
-        --set global.clusterDomain=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') 
+    curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-install-${os_platform}.tar.gz" -o $CLUSTER_WORKDIR/openshift-install.tar.gz
+    tar zxvf $CLUSTER_WORKDIR/openshift-install.tar.gz -C $CLUSTER_WORKDIR
+    rm -f $CLUSTER_WORKDIR/openshift-install.tar.gz
+    chmod +x $CLUSTER_WORKDIR/openshift-install
 
-    # Wait for Deployment
-    echo -n "Waiting for pods ready..."
-    while [[ $(oc get pods -l app.kubernetes.io/name=argocd-server -n openshift-gitops -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
-fi
+    #### OC CLI ####
+    echo "⬇️  Downloading the 'oc' command..."
 
-if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+    curl "${OCP_DOWNLOAD_BASE_URL}/${OPENSHIFT_VERSION}/openshift-client-${os_platform}.tar.gz" -o $CLUSTER_WORKDIR/oc.tar.gz
+    tar zxvf $CLUSTER_WORKDIR/oc.tar.gz -C $CLUSTER_WORKDIR
+    rm -f $CLUSTER_WORKDIR/oc.tar.gz
+    chmod +x $CLUSTER_WORKDIR/oc
 
-    echo -e "\n📋==============================="
-    echo -e "📋=     INSTALL CERTIFICATES    ="
-    echo -e "📋===============================\n"
+    #### HELM CLI ####
+    HELM_VERSION=${HELM_VERSION:-3.21.2}
+    HELM_DOWNLOAD_URL="https://mirror.openshift.com/pub/cgw/helm/${HELM_VERSION}/helm-${helm_platform}-${OS_ARCH}"
+    echo "⬇️  Downloading the 'helm' command (v${HELM_VERSION})..."
+    curl -fL "$HELM_DOWNLOAD_URL" -o $CLUSTER_WORKDIR/helm
+    if ! file $CLUSTER_WORKDIR/helm | grep -q "ELF\|Mach-O"; then
+        echo "❌ Downloaded helm is not a valid binary. Content:"
+        head -2 $CLUSTER_WORKDIR/helm
+        echo "URL was: $HELM_DOWNLOAD_URL"
+        echo "Falling back to upstream Helm..."
+        curl -fsSL https://get.helm.sh/helm-v${HELM_VERSION}-${helm_platform}-${OS_ARCH}.tar.gz | tar -xz --strip-components=1 -C $CLUSTER_WORKDIR ${helm_platform}-${OS_ARCH}/helm
+    fi
+    chmod +x $CLUSTER_WORKDIR/helm
 
-    # Install OpenShift cert-manager operator
-    oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/refs/heads/main/application-02-cert-manager-operator.yaml
+    #### OCP CONFIG ####
+    cat install-config-template.yaml | RHPDS_TOP_LEVEL_ROUTE53_DOMAIN=$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN CLUSTER_NAME=$CLUSTER_NAME \
+      AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION RHOCM_PULL_SECRET=$RHOCM_PULL_SECRET \
+      WORKER_INSTANCE_TYPE=$WORKER_INSTANCE_TYPE WORKER_REPLICAS=$WORKER_REPLICAS \
+      MASTER_INSTANCE_TYPE=$MASTER_INSTANCE_TYPE MASTER_REPLICAS=${MASTER_REPLICAS:-3} \
+      EXISTING_SUBNETS=$EXISTING_SUBNETS SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY \
+      COMPUTE_ROOT_VOLUME=$COMPUTE_ROOT_VOLUME \
+      envsubst > $CLUSTER_WORKDIR/install-config.yaml
 
-    echo -n "Waiting for operator pods to be ready..."
-    while [[ $(oc get pods -l name=cert-manager-operator -n cert-manager-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+    echo -e "\nThis is the value of the install-config YAML:"
+    cat $CLUSTER_WORKDIR/install-config.yaml 
 
-    echo -n "Waiting for cert-manager pods to be ready..."
-    while [[ $(oc get pods -l app.kubernetes.io/instance=cert-manager -n cert-manager -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True True True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+    #### OCP INSTALLATION ####
 
-    # Configure API and Ingress certificates
-    curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-02-cert-manager-route53.yaml | CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION envsubst | oc apply -f -
+    openshift-install --dir $CLUSTER_WORKDIR create cluster --log-level debug
 
-    sleep 10 # Wait for the Certificates to be created in the cluster
+    sleep 5
+}
 
-    echo -ne "\nWaiting for ocp-api certificate to be ready..."
-    while [[ $(oc get certificate ocp-api -n openshift-config -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 5; done; echo -n -e "  [OK]\n"
+# Configure the htpasswd users and log in
+function step_auth() {
+    #### CREATE USERS ####
 
-    echo -ne "\nWaiting for ocp-ingress certificate to be ready..."
-    while [[ $(oc get certificate ocp-ingress -n openshift-ingress -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 5; done; echo -n -e "  [OK]\n"
+    echo -e "\n🔑==============================="
+    echo -e "🔑=   Configure authentication  ="
+    echo -e "🔑===============================\n"
 
-    sleep 10
+    KUBEADMIN_PASSWORD=$(cat "$CLUSTER_WORKDIR/auth/kubeadmin-password")
 
-    # Check cluster operators status
-    set +e  # Disable exit on non-zero status to keep the script running even if commands fail. There is no HA when cluster is SNO
-    echo -e "\nCheck cluster operators..."
-    while true; do
-        oc get clusteroperators
-        STATUS_AUTHENTICATION=$(oc get clusteroperators authentication -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
-        STATUS_CONSOLE=$(oc get clusteroperators console -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
-        STATUS_KUBE_API_SERVER=$(oc get clusteroperators kube-apiserver -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
-        STATUS_KUBE_SCHEDULER=$(oc get clusteroperators kube-scheduler -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
-        STATUS_KUBE_CONTROLLER_MANAGER=$(oc get clusteroperators kube-controller-manager -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+    echo -e "\t- kubeadmin password: $KUBEADMIN_PASSWORD"
+    echo -e "\t- Cluster api url: $OCP_API"
+    echo ""
 
-        if [ $STATUS_AUTHENTICATION == "False" ] && [ $STATUS_CONSOLE == "False" ] && [ $STATUS_KUBE_API_SERVER == "False" ] && [ $STATUS_KUBE_SCHEDULER == "False" ] && [ $STATUS_KUBE_CONTROLLER_MANAGER == "False" ]; then
-            echo -e "\n\tOperators updated!!\n"
+    oc login -u kubeadmin -p $KUBEADMIN_PASSWORD $OCP_API --insecure-skip-tls-verify=true
+
+    oc create secret generic htpass-secret -n openshift-config --from-file=htpasswd="${HTPASSWD_PATH:-auth/users.htpasswd}"
+    oc apply -f auth/oauth-cluster.yaml
+    oc apply -f "${GROUP_FILE_PATH:-auth/group-cluster-admins.yaml}"
+    oc apply -f auth/clusterrolebinding-cluster-admins.yaml
+
+    # Do not add default user as a group, but directly admin (It does not inherit access to gitOps)
+    oc adm policy add-cluster-role-to-user cluster-admin ${K_DEFAULT_USER}
+
+    echo -e "\n🔐Waiting some time to get OAuth configured..."
+    sleep 40
+
+    MAX_ATTEMPTS=${MAX_ATTEMPTS:-60}
+    ATTEMPT=0
+
+    while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+        ATTEMPT=$((ATTEMPT + 1))
+        printf "[%02d/%02d] Testing login... " "$ATTEMPT" "$MAX_ATTEMPTS"
+
+        if oc login -u "${K_DEFAULT_USER}" -p "${K_DEFAULT_PASSWD}" "$OCP_API" --insecure-skip-tls-verify=true &>/dev/null; then
+            echo "✅ Success!"
+            echo "🎉 Logged in as: ${K_DEFAULT_USER}"
+
+            # Remove kubeadmin if using different user
+            if [ "${K_DEFAULT_USER}" != "kubeadmin" ]; then
+                echo "🔧 Removing kubeadmin user..."
+                oc delete secret kubeadmin -n kube-system &>/dev/null || echo "⚠️  kubeadmin already removed"
+            fi
             break
         fi
 
-        echo -e "Cluster operators are still progressing...Sleep 60s...\n"
-        sleep 60
+        echo "⏳ Not ready yet"
+        [ $ATTEMPT -lt $MAX_ATTEMPTS ] && sleep 2
     done
 
+    if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+        echo "❌ Authentication failed after 2 minutes"
+        echo "💡 Try: oc login -u kubeadmin -p \$(cat $CLUSTER_WORKDIR/auth/kubeadmin-password) $OCP_API"
+        exit 1
+    fi
+
+    echo -e "\nDelete all the pods in Error state after installation (openshift-kube-apiserver, openshift-kube-scheduler, etc)"
+    oc get pods --all-namespaces | grep -E "Error|Failed" | awk '{print "oc delete pod " $2 " -n " $1}' | bash
+
+
+    # echo -e "\nApply the AlertRelabelConfig to demote the receiver alert to info..."
+    # oc apply -f ocp/AlertRelabelConfig-demote-receiver-alert.yaml
+}
+
+# Install OpenShift GitOps
+function step_gitops() {
+    if [[ "$INSTALL_OPENSHIFT_GITOPS" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+
+        echo -e "\n⚙️==============================="
+        echo -e "⚙️=      INSTALL OCP GITOPS     ="
+        echo -e "⚙️===============================\n"
+
+        # Install OpenShift GitOps operator
+        echo -e "\n[1/2]Install OpenShift GitOps operator"
+
+        oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-gitops-playground/refs/heads/main/argocd-operator-install.yaml
+
+        echo -n "Waiting for pods ready..."
+        while [[ $(oc get pods -l control-plane=gitops-operator -n openshift-gitops-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+
+        # Deploy the ArgoCD instance
+        echo -e "\n[2/2]Deploy the ArgoCD instance"
+        helm repo add alvarolop-gitops https://alvarolop.github.io/ocp-gitops-playground/
+        helm repo update alvarolop-gitops
+        helm upgrade --install argocd alvarolop-gitops/argocd-config --namespace openshift-gitops \
+            --set global.namespace=openshift-gitops \
+            --set global.clusterName=argocd \
+            --set argoRollout.enabled=true \
+            --set server.disableAdmin=false \
+            --set global.clusterDomain=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') 
+
+        # Wait for Deployment
+        echo -n "Waiting for pods ready..."
+        while [[ $(oc get pods -l app.kubernetes.io/name=argocd-server -n openshift-gitops -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+    fi
+}
+
+# Install cert-manager and Let's Encrypt certificates
+function step_certificates() {
+    if [[ "$INSTALL_LETS_ENCRYPT_CERTIFICATES" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+
+        echo -e "\n📋==============================="
+        echo -e "📋=     INSTALL CERTIFICATES    ="
+        echo -e "📋===============================\n"
+
+        # Install OpenShift cert-manager operator
+        oc apply -f https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/refs/heads/main/application-02-cert-manager-operator.yaml
+
+        echo -n "Waiting for operator pods to be ready..."
+        while [[ $(oc get pods -l name=cert-manager-operator -n cert-manager-operator -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+
+        echo -n "Waiting for cert-manager pods to be ready..."
+        while [[ $(oc get pods -l app.kubernetes.io/instance=cert-manager -n cert-manager -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True True True" ]]; do echo -n "." && sleep 1; done; echo -n -e "  [OK]\n"
+
+        # Configure API and Ingress certificates
+        curl -s https://raw.githubusercontent.com/alvarolop/ocp-secured-integration/main/application-02-cert-manager-route53.yaml | CLUSTER_DOMAIN=$(oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}') AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION envsubst | oc apply -f -
+
+        sleep 10 # Wait for the Certificates to be created in the cluster
+
+        echo -ne "\nWaiting for ocp-api certificate to be ready..."
+        while [[ $(oc get certificate ocp-api -n openshift-config -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 5; done; echo -n -e "  [OK]\n"
+
+        echo -ne "\nWaiting for ocp-ingress certificate to be ready..."
+        while [[ $(oc get certificate ocp-ingress -n openshift-ingress -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo -n "." && sleep 5; done; echo -n -e "  [OK]\n"
+
+        sleep 10
+
+        # Check cluster operators status
+        set +e  # Disable exit on non-zero status to keep the script running even if commands fail. There is no HA when cluster is SNO
+        echo -e "\nCheck cluster operators..."
+        while true; do
+            oc get clusteroperators
+            STATUS_AUTHENTICATION=$(oc get clusteroperators authentication -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+            STATUS_CONSOLE=$(oc get clusteroperators console -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+            STATUS_KUBE_API_SERVER=$(oc get clusteroperators kube-apiserver -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+            STATUS_KUBE_SCHEDULER=$(oc get clusteroperators kube-scheduler -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+            STATUS_KUBE_CONTROLLER_MANAGER=$(oc get clusteroperators kube-controller-manager -o go-template='{{range .status.conditions}}{{ if eq .type "Progressing"}}{{.status}}{{end}}{{end}}')
+
+            if [ $STATUS_AUTHENTICATION == "False" ] && [ $STATUS_CONSOLE == "False" ] && [ $STATUS_KUBE_API_SERVER == "False" ] && [ $STATUS_KUBE_SCHEDULER == "False" ] && [ $STATUS_KUBE_CONTROLLER_MANAGER == "False" ]; then
+                echo -e "\n\tOperators updated!!\n"
+                break
+            fi
+
+            echo -e "Cluster operators are still progressing...Sleep 60s...\n"
+            sleep 60
+        done
+        set -e
+
+    fi
+}
+
+# Install OpenShift Lightspeed
+function step_lightspeed() {
+    if [[ "$INSTALL_OPENSHIFT_LIGHTSPEED" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
+
+        echo -e "\n💡================================="
+        echo -e "💡=     INSTALL OCP LIGHTSPEED    ="
+        echo -e "💡=================================\n"
+
+        checkVariable "OLS_PROVIDER_NAME"
+        checkVariable "OLS_PROVIDER_MODEL_NAME"
+        checkVariable "OLS_PROVIDER_TYPE"
+        checkVariable "OLS_PROVIDER_API_URL"
+        checkVariable "OLS_PROVIDER_API_TOKEN"
+
+        cat application-ocp-lightspeed.yaml | \
+            OLS_PROVIDER_NAME=$OLS_PROVIDER_NAME OLS_PROVIDER_MODEL_NAME=$OLS_PROVIDER_MODEL_NAME \
+            OLS_PROVIDER_TYPE=$OLS_PROVIDER_TYPE OLS_PROVIDER_API_URL=$OLS_PROVIDER_API_URL \
+            OLS_PROVIDER_API_TOKEN=$OLS_PROVIDER_API_TOKEN envsubst | oc apply -f -
+    fi
+}
+
+# Patch the default MachineSets of an SNO
+function step_machinesets() {
+    if [[ "$WORKER_REPLICAS" -eq 0 ]]; then
+        echo "🎯 SNO detected: patching the default MachineSets (0 replicas) to use $MASTER_INSTANCE_TYPE, just in case you want to scale up"
+
+        # The installer creates one MachineSet per AZ with an old/small default instance type.
+        # They already have the right region, AMI, subnets and security groups, so we only change the instance type.
+        for MACHINESET in $(oc get machineset -n openshift-machine-api -o jsonpath='{.items[*].metadata.name}'); do
+            oc patch machineset "$MACHINESET" -n openshift-machine-api --type merge \
+                -p '{"spec":{"template":{"spec":{"providerSpec":{"value":{"instanceType":"'"$MASTER_INSTANCE_TYPE"'"}}}}}}'
+        done
+    fi
+}
+
+# Any step other than "install" needs an existing cluster workdir
+if ! run_step install; then
+    if [ ! -x "$CLUSTER_WORKDIR/oc" ]; then
+        echo "❌ '$CLUSTER_WORKDIR/oc' not found. Run the 'install' step first." 1>&2
+        exit 1
+    fi
+    # If "auth" is not run, reuse the existing session or fall back to the installer kubeconfig
+    if ! run_step auth && ! oc whoami &>/dev/null; then
+        echo "🔑 Not logged in. Using $CLUSTER_WORKDIR/auth/kubeconfig"
+        export KUBECONFIG="$CLUSTER_WORKDIR/auth/kubeconfig"
+    fi
 fi
 
+### RUN ###
+if run_step install;       then step_install;       fi
+if run_step auth;          then step_auth;          fi
+if run_step gitops;        then step_gitops;        fi
+if run_step certificates;  then step_certificates;  fi
+if run_step lightspeed;    then step_lightspeed;    fi
+if run_step machinesets;   then step_machinesets;   fi
 
-if [[ "$INSTALL_OPENSHIFT_LIGHTSPEED" =~ ^([Tt]rue|[Yy]es|[1])$ ]]; then
-
-    echo -e "\n💡================================="
-    echo -e "💡=     INSTALL OCP LIGHTSPEED    ="
-    echo -e "💡=================================\n"
-
-    checkVariable "OLS_PROVIDER_NAME"
-    checkVariable "OLS_PROVIDER_MODEL_NAME"
-    checkVariable "OLS_PROVIDER_TYPE"
-    checkVariable "OLS_PROVIDER_API_URL"
-    checkVariable "OLS_PROVIDER_API_TOKEN"
-
-    cat application-ocp-lightspeed.yaml | \
-        OLS_PROVIDER_NAME=$OLS_PROVIDER_NAME OLS_PROVIDER_MODEL_NAME=$OLS_PROVIDER_MODEL_NAME \
-        OLS_PROVIDER_TYPE=$OLS_PROVIDER_TYPE OLS_PROVIDER_API_URL=$OLS_PROVIDER_API_URL \
-        OLS_PROVIDER_API_TOKEN=$OLS_PROVIDER_API_TOKEN envsubst | oc apply -f -
-fi
-
-
-if [[ "$WORKER_REPLICAS" -eq 0 ]]; then
-    echo "🎯 SNO detected: patching the default MachineSets (0 replicas) to use $MASTER_INSTANCE_TYPE, just in case you want to scale up"
-
-    # The installer creates one MachineSet per AZ with an old/small default instance type.
-    # They already have the right region, AMI, subnets and security groups, so we only change the instance type.
-    for MACHINESET in $(oc get machineset -n openshift-machine-api -o jsonpath='{.items[*].metadata.name}'); do
-        oc patch machineset "$MACHINESET" -n openshift-machine-api --type merge \
-            -p '{"spec":{"template":{"spec":{"providerSpec":{"value":{"instanceType":"'"$MASTER_INSTANCE_TYPE"'"}}}}}}'
-    done
-fi
 
 # Print values to access the cluster
 
