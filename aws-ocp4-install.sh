@@ -2,8 +2,6 @@
 
 # exec examples
 # ./aws-ocp4-install.sh aws-ocp4-config
-# Run only some steps (install auth gitops certificates lightspeed machinesets), e.g. to resume after a failure:
-# STEPS="gitops,certificates" ./aws-ocp4-install.sh aws-ocp4-config
 # GROUP_FILE_PATH=auth/other-group-cluster-admins.yaml HTPASSWD_PATH=auth/other-users.htpasswd ./aws-ocp4-install.sh aws-ocp4-config
 
 set -e
@@ -194,24 +192,7 @@ echo ⚙️  ------------------------------------
 OCP_API=https://api.$CLUSTER_NAME.$RHPDS_TOP_LEVEL_ROUTE53_DOMAIN:6443
 
 ### STEPS ###
-# Steps run in this fixed order. Use STEPS to run only some of them, e.g. to resume after a failure.
-ALL_STEPS="install auth gitops certificates lightspeed machinesets"
-STEPS="${STEPS:-$ALL_STEPS}"
-STEPS="${STEPS//,/ }"
-
-for s in $STEPS; do
-    if [[ " $ALL_STEPS " != *" $s "* ]]; then
-        echo "❌ Unknown step '$s'. Valid steps: $ALL_STEPS" 1>&2
-        exit 1
-    fi
-done
-
-function run_step() {
-    [[ " $STEPS " == *" $1 "* ]]
-}
-
-echo "🪜 Steps to run: $STEPS"
-
+# Every step except "install" can be re-run. To skip one, comment its call in the RUN section below.
 
 # Download the CLIs, generate install-config and create the cluster
 function step_install() {
@@ -466,27 +447,14 @@ function step_machinesets() {
     fi
 }
 
-# Any step other than "install" needs an existing cluster workdir
-if ! run_step install; then
-    if [ ! -x "$CLUSTER_WORKDIR/oc" ]; then
-        echo "❌ '$CLUSTER_WORKDIR/oc' not found. Run the 'install' step first." 1>&2
-        exit 1
-    fi
-    # If "auth" is not run, reuse the existing session or fall back to the installer kubeconfig
-    if ! run_step auth && ! oc whoami &>/dev/null; then
-        echo "🔑 Not logged in. Using $CLUSTER_WORKDIR/auth/kubeconfig"
-        export KUBECONFIG="$CLUSTER_WORKDIR/auth/kubeconfig"
-    fi
-fi
-
 ### RUN ###
-if run_step install;       then step_install;       fi
-if run_step auth;          then step_auth;          fi
-if run_step gitops;        then step_gitops;        fi
-if run_step certificates;  then step_certificates;  fi
-if run_step lightspeed;    then step_lightspeed;    fi
-if run_step machinesets;   then step_machinesets;   fi
-
+# "install" is NOT re-runnable: comment it out when resuming on an existing cluster.
+step_install
+step_auth
+step_gitops
+step_certificates
+step_lightspeed
+step_machinesets
 
 # Print values to access the cluster
 
