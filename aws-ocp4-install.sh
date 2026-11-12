@@ -421,22 +421,14 @@ fi
 
 
 if [[ "$WORKER_REPLICAS" -eq 0 ]]; then
-    echo "🎯 Adding three MachineSets (AZs) for the future, just if you want to scale up an SNO"
+    echo "🎯 SNO detected: patching the default MachineSets (0 replicas) to use $MASTER_INSTANCE_TYPE, just in case you want to scale up"
 
-    oc process -f ocp/template-worker.yaml \
-        -p INFRASTRUCTURE_ID=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster) \
-        -p INSTANCE_TYPE="$MASTER_INSTANCE_TYPE" -p AZ="a" -p REPLICAS=0 | \
-        oc apply -n openshift-machine-api -f -
-
-    oc process -f ocp/template-worker.yaml \
-        -p INFRASTRUCTURE_ID=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster) \
-        -p INSTANCE_TYPE="$MASTER_INSTANCE_TYPE" -p AZ="b" -p REPLICAS=0 | \
-        oc apply -n openshift-machine-api -f -
-
-    oc process -f ocp/template-worker.yaml \
-        -p INFRASTRUCTURE_ID=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster) \
-        -p INSTANCE_TYPE="$MASTER_INSTANCE_TYPE" -p AZ="c" -p REPLICAS=0 | \
-        oc apply -n openshift-machine-api -f -
+    # The installer creates one MachineSet per AZ with an old/small default instance type.
+    # They already have the right region, AMI, subnets and security groups, so we only change the instance type.
+    for MACHINESET in $(oc get machineset -n openshift-machine-api -o jsonpath='{.items[*].metadata.name}'); do
+        oc patch machineset "$MACHINESET" -n openshift-machine-api --type merge \
+            -p '{"spec":{"template":{"spec":{"providerSpec":{"value":{"instanceType":"'"$MASTER_INSTANCE_TYPE"'"}}}}}}'
+    done
 fi
 
 # Print values to access the cluster
