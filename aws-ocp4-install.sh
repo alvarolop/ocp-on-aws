@@ -72,6 +72,16 @@ function checkVariable {
     fi
 }
 
+# Print only the first characters of a secret, so that it can be identified without leaking it
+function mask_secret {
+    local value="$1" visible="${2:-4}"
+    if [[ ${#value} -le $visible ]]; then
+        echo "****"
+    else
+        echo "${value:0:$visible}****"
+    fi
+}
+
 # Random suffix generator
 function generate_random_password {
     LC_ALL=C tr -dc 'a-z0-9' </dev/urandom | head -c 15
@@ -181,7 +191,7 @@ echo REUSE_AWS_VPC=$REUSE_AWS_VPC
 echo EXISTING_VPC=$EXISTING_VPC
 echo EXISTING_SUBNETS=$EXISTING_SUBNETS
 echo AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-echo AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+echo AWS_SECRET_ACCESS_KEY=$(mask_secret "$AWS_SECRET_ACCESS_KEY")
 echo AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 echo INSTALL_LETS_ENCRYPT_CERTIFICATES=$INSTALL_LETS_ENCRYPT_CERTIFICATES
 echo INSTALL_OPENSHIFT_GITOPS=$INSTALL_OPENSHIFT_GITOPS
